@@ -130,13 +130,6 @@ def setup_logger(is_log: bool, experiment_name: str, project_name: str, config_v
 
 @hydra.main(version_base=None, config_path="./configs", config_name="default")
 def run_training(config: DictConfig) -> None:
-    #! 为了多卡，注释掉了
-    # ## get device config
-    # if config.gpus is not None:
-    #     device = f'cuda:{config.gpus}'
-    # else:
-    #     device = 'cpu'
-    
     ## compute modeling dimension according to task
     config.model.d_x = compute_model_dim(config.task)
     if os.environ.get('SLURM') is not None:
@@ -175,8 +168,6 @@ def run_training(config: DictConfig) -> None:
     ## create model and optimizer
     mdl = create_model(config, slurm=config.slurm)
     mdl.train_dataloader_len = train_dataloader_len
-    #! 为了多卡，注释掉了
-    # mdl.to(device=device) 
 
     if logger is not None:
         logger.watch(mdl, log="gradients", log_freq=100)

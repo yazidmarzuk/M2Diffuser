@@ -47,41 +47,14 @@ def main(opt):
 
     ## Load training args ##
     spec_file = os.path.join(opt.specs_file_dir, opt.spec_file)
-    """
-    /home/ysx/0_WorkSpace/4_Grasping_Pointcloud_Networks/1_Grasp_Diffusion/grasp_diffusion/scripts/train/
-    params/multiobject_p_graspdif
-    """
 
-    args = load_experiment_specifications(spec_file) #! 模型参数
-    """
-    args:
-    {'Description': ['This experiment trains jointly an SDF model and a SE(3) Grasp Energy'], 'exp_log_dir': 
-    'multiobject_p_graspdif', 'single_object': False, 'TrainSpecs': {'batch_size': 2, 'num_epochs': 90000, 
-    'steps_til_summary': 500, 'iters_til_checkpoint': 1000, 'epochs_til_checkpoint': 10}, 'NetworkArch': 
-    'PointcloudGraspDiffusion', 'NetworkSpecs': {'feature_encoder': {'enc_dim': 132, 'in_dim': 3, 'out_dim': 7, 
-    'dims': [512, 512, 512, 512, 512, 512, 512, 512], 'dropout': [0, 1, 2, 3, 4, 5, 6, 7], 'dropout_prob': 0.2, 
-    'norm_layers': [0, 1, 2, 3, 4, 5, 6, 7], 'latent_in': [4], 'xyz_in_all': False, 'use_tanh': False, 
-    'latent_dropout': False, 'weight_norm': True}, 'encoder': {'latent_size': 132, 'hidden_dim': 512}, 
-    'points': {'n_points': 30, 'loc': [0.0, 0.0, 0.5], 'scale': [0.7, 0.5, 0.7]}, 'decoder': {'hidden_dim': 512}}, 
-    'LearningRateSchedule': [{'Type': 'Step', 'Initial': 0.0005, 'Interval': 500, 'Factor': 0.5}, {'Type': 'Step', 
-    'Initial': 0.001, 'Interval': 500, 'Factor': 0.5}, {'Type': 'Step', 'Initial': 0.001, 'Interval': 500, 
-    'Factor': 0.5}], 'Losses': ['sdf_loss', 'projected_denoising_loss']}
-    """
+    args = load_experiment_specifications(spec_file) 
 
     # saving directories
     root_dir = opt.saving_root
     exp_dir  = os.path.join(root_dir, args['exp_log_dir'])
     args['saving_folder'] = exp_dir
 
-    """
-    opt: 训练参数
-    Namespace(class_type='Mug', config_filepath=None, device='cuda', 
-    models_root='/home/ysx/0_WorkSpace/4_Grasping_Pointcloud_Networks', 
-    saving_root='/home/ysx/0_WorkSpace/4_Grasping_Pointcloud_Networks/1_Grasp_Diffusion/logs', 
-    spec_file='multiobject_p_graspdif', 
-    specs_file_dir='/home/ysx/0_WorkSpace/4_Grasping_Pointcloud_Networks/1_Grasp_Diffusion/
-    grasp_diffusion/scripts/train/params', summary=False)
-    """
     if opt.device =='cuda':
         if 'cuda_device' in args:
             cuda_device = args['cuda_device']

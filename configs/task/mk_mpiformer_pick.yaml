@@ -35,8 +35,7 @@ datamodule:
   test_batch_size: ${task.test.batch_size}
   use_color: true
   use_normal: false
-  # data_dir: ${your_dataset_path}/${task.type}
-  data_dir: /data1/sixuyan/m2diffuser/pick_data/pick_data_1w/data/pick
+  data_dir: ${your_dataset_path}/${task.type}
   data_dir_slurm: None
   scene_model_name: ${model.scene_model.name}
   num_scene_points: 4096

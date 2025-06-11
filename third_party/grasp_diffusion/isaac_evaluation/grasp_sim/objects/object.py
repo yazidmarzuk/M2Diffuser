@@ -10,10 +10,10 @@ from isaac_evaluation.utils.generate_obj_urdf import generate_obj_urdf
 
 
 class SimpleObject():
-    '''
+    """
     A simple Object Isaac Gym class.
     This class takes care of the objects pose or even of the objects pose rearrangement.
-    '''
+    """
     def __init__(self, gym, sim, env, isaac_base, env_number, pose, obj_id, obj_name, obj_type='Mug',
                  args = None,
                  collision_group=1, segmentationId=0, linearDamping=0, angularDamping=0, scale=1., disable_gravity=True):

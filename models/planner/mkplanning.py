@@ -53,7 +53,6 @@ class GreedyMKPlanner(Optimizer):
         else:
             raise Exception('Unsupported greedy type')
         
-        #! 同时限定了初始的连续性
         loss += F.l1_loss(x[:, 0, :], start.squeeze(1), reduction='mean')
 
         return (-1.0) * loss

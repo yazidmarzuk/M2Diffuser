@@ -1,20 +1,20 @@
+import enum
+import os
+import enum
+import copy
+import torch
+import numpy as np
 from pathlib import Path
 from typing import Dict
 from torch.utils.data import Dataset
 from env.scene.base_scene import Scene
 from preprocessing.data_utils import compute_scene_sdf
 from utils.registry import Registry
-import enum
-import copy
-from pathlib import Path
 from utils.colors import colors
+from pathlib import Path
 from typing import Dict
 from cprint import *
-import enum
-import os
 from torch.utils.data import Dataset
-import numpy as np
-import torch
 from env.agent.mec_kinova import MecKinova
 from env.sampler.mk_sampler import MecKinovaSampler
 from utils.path import RootPath
@@ -24,8 +24,7 @@ from trimesh import transform_points
 DATASET = Registry('dataset')
 
 class DatasetType(enum.Enum):
-    """
-    A simple enum class to indicate whether a dataloader is for training, validating, or testing.
+    """ A simple enum class to indicate whether a dataloader is for training, validating, or testing.
     """
     TRAIN = 0
     VAL = 1
@@ -35,11 +34,13 @@ def create_dataset(cfg: dict, data_dir: Path, dataset_type: DatasetType, **kwarg
     """ Create a `torch.utils.data.Dataset` object from configuration.
 
     Args:
-        cfg: configuration object, dataset configuration
-        slurm: on slurm platform or not. This field is used to specify the data path
-    
+        cfg [dict]: Dataset configuration object.
+        data_dir [Path]: Path to the root of the data directory.
+        dataset_type [DatasetType]: Type of dataset (TRAIN, VAL, or TEST).
+        **kwargs [Dict]: Additional keyword arguments for dataset initialization.
+
     Return:
-        A Dataset object that has loaded the designated dataset.
+        Dataset: A Dataset object that has loaded the designated dataset.
     """
     if dataset_type == DatasetType.TRAIN:
         return DATASET.get(cfg.train_data_type)(cfg, data_dir, dataset_type, **kwargs)
@@ -51,8 +52,8 @@ def create_dataset(cfg: dict, data_dir: Path, dataset_type: DatasetType, **kwarg
         raise Exception(f"Invalid dataset type: {dataset_type}")
 
 class MKPointCloudStateBase(Dataset):
-    ''' State base dataset for meckinova motion policy
-    '''
+    """ State base dataset for meckinova motion policy.
+    """
 
     def __init__(
         self,
@@ -61,17 +62,17 @@ class MKPointCloudStateBase(Dataset):
         dataset_type: DatasetType, 
         **kwargs: Dict,
     ):
-        '''
-        Arguments:
-            directory {Path} -- The path to the root of the data directory
-            trajectory_key {str} -- Generation strategy of expert, e.g. VKC
-            num_agent_points {int} -- The number of points to sample from the agent
-            num_scene_points {int} -- The number of points to sample from the scene
-            num_object_points {int} -- The number of points to sample from the object object
-            dataset_type {DatasetType} -- What type of dataset this is
-            random_scale {float} -- The standard deviation of the random normal noise to apply 
-                                    to the joints during training. This is only used for train datasets.
-        '''
+        """ Initialize the dataset。
+
+        Args:
+            cfg [dict]: Configuration dictionary including trajectory_key, task_type, and point sampling numbers.
+            data_dir [Path]: Root directory path of the data.
+            dataset_type [DatasetType]: Type of dataset (train/val/test).
+            **kwargs [Dict]: Additional optional parameters.
+
+        Return:
+            None
+        """
         self._init_directory(data_dir, dataset_type)
         self.trajectory_key = cfg.trajectory_key
         self.task_type = cfg.task_type
@@ -93,15 +94,18 @@ class MKPointCloudStateBase(Dataset):
             raise Exception(f'Invalid agent name: {self.agent_name}')
     
     def _init_directory(self, directory: Path, dataset_type: DatasetType):
-        '''
-        Sets the path for the internal data structure based on the dataset type.
+        """ Sets the path for the internal data structure based on the dataset type.
 
-        Arguments:
-            directory {Path} -- The path to the root of the data directory
-            dataset_type {DatasetType} -- What type of dataset this is      
-        Raises:
-            Exception -- Raises an exception when the dataset type is unsupported
-        '''
+        Args:
+            directory [Path]: Root directory path of the data.
+            dataset_type [DatasetType]: Type of dataset (train/val/test).
+        
+        Return: 
+            None
+
+        Raises: 
+            Exception: Raised when dataset type is unsupported.
+        """
         self.type = dataset_type
         if dataset_type == DatasetType.TRAIN:
             self._dir = directory / 'train'
@@ -120,22 +124,20 @@ class MKPointCloudStateBase(Dataset):
     
     @property
     def num_trajectories(self):
-        '''
-        Returns the total number of trajectories in the dataset
-        '''
+        """ Get the total number of trajectories in the dataset.
+        """
         return self._num_trajectories
     
     def get_inputs(self, trajectory_idx: int, timestep: int) -> Dict[str, torch.Tensor]:
-        '''
-        Loads all the relevant data and puts it in a dictionary. This includes normalizing all 
-        configurations and constructing the pointcloud. If a training dataset, applies some 
-        randomness to joints (before sampling the pointcloud).
+        """ Loads and processes all relevant data for a given trajectory and timestep, including normalization, point cloud construction, 
+        and optional randomization for training. Aggregates the data into a dictionary for use by the dataloader during training or validation.
 
-        Arguments:
-            trajectory_idx {int} -- The index of the trajectory in the train file
-            timestep {int} -- The timestep within that trajectory
-        Returns:
-            Dict[str, torch.Tensor] -- The data used aggregated by the dataloader and used for training
+        Args:
+            trajectory_idx [int]: The index of the trajectory in the dataset file.
+            timestep [int]: The timestep within the selected trajectory.
+        Return:
+            Dict[str, torch.Tensor]: A dictionary containing all processed and aggregated data required for training or validation, 
+            including scene, agent, and object information, point clouds, configurations, transformation matrices, and SDF data.
         ------------------------------------------------------------------------------------------------
         item = {
             'scene_name': <scene name>,
@@ -161,7 +163,7 @@ class MKPointCloudStateBase(Dataset):
             'xyz': <mpinets and decision-transformer input, observed point cloud and labels included scene, object, agent, placement area.etc.>,
             'feat': <m2diffuser input, different parts of the point cloud have different colors>,
         }
-        '''
+        """
         item = {} # Data used for training or validation
         data = np.load(str(self._dir / str(trajectory_idx)) + '.npy', allow_pickle=True).item() # load .npy and convert np.ndarray to List
         item['scene_name'] = data['scene']['name']
@@ -184,8 +186,8 @@ class MKPointCloudStateBase(Dataset):
             item['T_ow_final'] = np.array(data['transformation_matrix']['T_ow_final'])
             item['T_oa_init'] = np.array(data['transformation_matrix']['T_oa_init'])
 
-        #! 点云的合并放在 tranform 中，点云要降采样，点云和颜色需要打乱
-        #! 如果是 goal-reach 的话，给的是 gripper 的点云
+        # merge of point clouds is done in `transform`; point clouds should be downsampled, and both point clouds and colors should be shuffled.
+        # for goal-reach task, the gripper's point cloud is used.
         item['scene_pc_a'] = downsample_pointcloud(
             pc=np.array(data['scene']['pointcloud']['points']),
             sample_num=self.num_scene_points,
@@ -287,7 +289,7 @@ class MKPointCloudStateBase(Dataset):
             item['feat'] = np.concatenate(
                 (
                     np.expand_dims(np.array(colors[1]), 0).repeat(self.num_scene_points, 0), 
-                    np.expand_dims(np.array(colors[2]), 0).repeat(self.num_object_points, 0), #! 如果往下面加点云，点云的编号需要增加
+                    # if you add more point clouds below, you need to increment the point cloud label accordingly
                 ), axis=0,
             )
             
@@ -363,8 +365,8 @@ class MKPointCloudStateBase(Dataset):
 
 
 class MKPointCloudSquenceBase(Dataset):
-    ''' Squence base dataset for meckinova motion policy
-    '''
+    """ Squence base dataset for meckinova motion policy.
+    """
 
     def __init__(
         self,
@@ -373,17 +375,17 @@ class MKPointCloudSquenceBase(Dataset):
         dataset_type: DatasetType, 
         **kwargs: Dict,
     ):
-        '''
-        Arguments:
-            directory {Path} -- The path to the root of the data directory
-            trajectory_key {str} -- Generation strategy of expert, e.g. VKC
-            num_agent_points {int} -- The number of points to sample from the agent
-            num_scene_points {int} -- The number of points to sample from the scene
-            num_object_points {int} -- The number of points to sample from the object object
-            dataset_type {DatasetType} -- What type of dataset this is
-            random_scale {float} -- The standard deviation of the random normal noise to apply 
-                                    to the joints during training. This is only used for train datasets.
-        '''
+        """ Initialize the dataset base class with configuration, data directory, and dataset type.
+
+        Args:
+            cfg [dict]: Configuration dictionary containing dataset and model parameters.
+            data_dir [Path]: The path to the root of the data directory.
+            dataset_type [DatasetType]: The type of dataset (e.g., TRAIN, TEST, VALIDATION).
+            **kwargs [Dict]: Additional keyword arguments.
+
+        Return:
+            None
+        """
         self._init_directory(data_dir, dataset_type)
         self.trajectory_key = cfg.trajectory_key
         self.context_length = cfg.context_length
@@ -410,15 +412,15 @@ class MKPointCloudSquenceBase(Dataset):
             raise Exception(f'Invalid agent name: {self.agent_name}')
     
     def _init_directory(self, directory: Path, dataset_type: DatasetType):
-        '''
-        Sets the path for the internal data structure based on the dataset type.
+        """ Initializes the internal directory structure and sets dataset-specific paths and attributes.
 
-        Arguments:
-            directory {Path} -- The path to the root of the data directory
-            dataset_type {DatasetType} -- What type of dataset this is      
-        Raises:
-            Exception -- Raises an exception when the dataset type is unsupported
-        '''
+        Args:
+            directory [Path]: The path to the root of the data directory.
+            dataset_type [DatasetType]: The type of dataset (TRAIN, VAL, or TEST).
+
+        Return:
+            None. Sets internal attributes for directory, dataset type, number of trajectories, and database path.
+        """
         self.type = dataset_type
         if dataset_type == DatasetType.TRAIN:
             self._dir = directory / 'train'
@@ -437,22 +439,22 @@ class MKPointCloudSquenceBase(Dataset):
     
     @property
     def num_trajectories(self):
-        '''
-        Returns the total number of trajectories in the dataset
-        '''
+        """ Returns the total number of trajectories in the dataset.
+        """
         return self._num_trajectories
     
     def get_inputs(self, trajectory_idx: int, timestep: int) -> Dict[str, torch.Tensor]:
-        '''
-        Loads all the relevant data and puts it in a dictionary. This includes normalizing all 
-        configurations and constructing the pointcloud. If a training dataset, applies some 
-        randomness to joints (before sampling the pointcloud).
+        """ Loads and processes all relevant data for a given trajectory and timestep, normalizing configurations,
+        constructing point clouds, and aggregating all necessary information into a dictionary for training or validation.
+        Handles different task types ('pick', 'place', 'goal-reach') and applies data augmentation if in training mode.
 
-        Arguments:
-            trajectory_idx {int} -- The index of the trajectory in the train file
-            timestep {int} -- The timestep within that trajectory
-        Returns:
-            Dict[str, torch.Tensor] -- The data used aggregated by the dataloader and used for training
+        Args:
+            trajectory_idx [int]: The index of the trajectory in the dataset.
+            timestep [int]: The timestep within the selected trajectory.
+
+        Return:
+            Dict[str, torch.Tensor]: A dictionary containing all processed and aggregated data required for model input,
+            including normalized configurations, point clouds, transformation matrices, SDF data, and supervision sequences.
         ------------------------------------------------------------------------------------------------
         item = {
             'scene_name': <scene name>,
@@ -478,7 +480,7 @@ class MKPointCloudSquenceBase(Dataset):
             'xyz': <mpinets and decision-transformer input, observed point cloud and labels included scene, object, agent, placement area.etc.>,
             'feat': <m2diffuser input, different parts of the point cloud have different colors>,
         }
-        '''
+        """
         item = {} # Data used for training or validation
         data = np.load(str(self._dir / str(trajectory_idx)) + '.npy', allow_pickle=True).item() # load .npy and convert np.ndarray to List
         item['scene_name'] = data['scene']['name']
@@ -490,7 +492,6 @@ class MKPointCloudSquenceBase(Dataset):
         item['task_name'] = self.task_type
         if self.task_type != 'goal-reach':
             item['object_name'] = data['object']['name']
-        #! task 如果是放置的话，还需要添加别的数据
         item['T_aw'] = np.array(data['transformation_matrix']['T_aw'])
         if self.task_type == 'pick':
             item['grasping_pose'] = np.array(data['task']['grasping_pose']) 
@@ -502,7 +503,7 @@ class MKPointCloudSquenceBase(Dataset):
             item['T_ow_final'] = np.array(data['transformation_matrix']['T_ow_final'])
             item['T_oa_init'] = np.array(data['transformation_matrix']['T_oa_init'])
 
-        #! 如果是 goal-reach 的话，给的是 gripper 的点云
+        # if the task is goal-reach, use the gripper's point cloud
         item['scene_pc_a'] = downsample_pointcloud(
             pc=np.array(data['scene']['pointcloud']['points']),
             sample_num=self.num_scene_points,

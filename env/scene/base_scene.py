@@ -3,23 +3,32 @@ import os
 import trimesh
 import numpy as np
 import open3d as o3d
+from lxml import etree
 from typing import List, Union
 from math import cos, sin, pi
 from yourdfpy import URDF, Link
 from pathlib import Path
 from utils.transform import TransformationMatrix2QuaternionXYZ
 from utils.path import RootPath
-import copy
-from pathlib import Path
-from lxml import etree
 
 class Scene():
-    """
-    Provides high level functions to deal with a scene.
-    NOTE: Contains collision check with agent.
+    """ A high-level class for managing and manipulating 3D scenes described by URDF files. 
+    This class provides utilities for loading, transforming, exporting, and sampling from 
+    scene representations, including collision and visual models. It supports operations 
+    such as cropping the scene, sampling point clouds, updating object poses, and extracting 
+    mesh data for specific links. The class also handles the creation of modified URDFs 
+    (e.g., without flooring or ceiling) for different purposes.
     """
 
     def __init__(self, name: str) -> None:
+        """ Initializes the Scene object with the given name.
+
+        Args:
+            name [str]: The name of the scene, used to construct file paths for various scene resources.
+
+        Return:
+            None. Initializes various file paths and loads URDF models for the scene.
+        """
         self.name = name
         self._urdf_collision_path = str(
             RootPath.SCENE / self.name / "main_without_flooring.urdf"
@@ -240,7 +249,7 @@ class Scene():
         sample_num: int,
         LWH: List[float],
         min_z: float = -0.01,
-        sample_color: bool = False, #! when sample_color is true, there is wrong because of trimesh.
+        sample_color: bool = False, # when sample_color is true, there is wrong because of trimesh.
     ) -> np.ndarray:
         """
         The scene is cropped under the agent's local view and point cloud sampling is performed,

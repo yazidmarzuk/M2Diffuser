@@ -1,6 +1,6 @@
 # M²Diffuser: Diffusion-based Trajectory Optimization for Mobile Manipulation in 3D Scenes
 
-**<span style="color:red;">IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI) 2025</span>**
+**IEEE Transactions on Pattern Analysis and Machine Intelligence (T-PAMI) 2025**
 
 <p align="left">
     <a href='https://m2diffuser.github.io/assets/paper/M2Diffuser.pdf'>
@@ -48,7 +48,7 @@ We recommend using the same CUDA and PyTorch versions as ours (PyTorch 1.13.1 wi
 ```bash
 ./setup_env.sh
 ```
-Modify the `yourdfpy/urdf.py` file in the yourdfpy package by editing lines 1240–1244.
+Modify the `yourdfpy/urdf.py` file in the yourdfpy package by editing lines `1240–1244`.
 ```python
 # delete the original code in the file and replace it with the code below
 new_s = new_s.scaled([geometry.mesh.scale[0], geometry.mesh.scale[1], geometry.mesh.scale[2]])
@@ -59,9 +59,7 @@ Please download the robot and scene models, including:
 - [URDF]() and [USD]() files of the robots
 - [URDF]() and [USD]() files of the scenes
 
-After downloading, please unzip and place the URDF files of the robots and scenes into the `${your_urdf_model_path}` directory, and update the corresponding paths in `utils/path.py` according to your actual directory structure.
-
-Additionally, please unzip and place the USD files of the robots and scenes into the `${your_usd_model_path}` directory, and update the corresponding paths in `xxx/yyy.py` according to your actual directory structure.
+After downloading, please unzip and place the URDF files of the robots and scenes into the `${your_urdf_model_path}` directory, and update the corresponding paths in `utils/path.py` according to your actual directory structure. The directory path of USD files will be introduced in [here](#evaluate-models)。
 
 ## Pre-process Dataset
 Please download and unzip our pre-processed dataset, which is pre-processed to be used for model training. It includes three mobile manipulation tasks: [pick](), [place](), and [goal-reach](). The dataset directory is organized as follows:
@@ -215,6 +213,8 @@ To evaluate task success rates in NVIDIA Isaac Sim, a separate conda environment
 cd ${your_workspace}
 git clone ...
 ```
+
+Additionally, please unzip and place the USD files of the robots and scenes into the `${your_workspace}/Tongverse` directory. Of note, this path is hardcoded and does not support custom configuration.
 
 - Evaluate Tasks (`pick` and `place`)
 ```bash

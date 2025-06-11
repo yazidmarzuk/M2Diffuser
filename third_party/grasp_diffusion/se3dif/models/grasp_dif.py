@@ -57,9 +57,9 @@ class NaiveSE3DiffusionModel(nn.Module):
 
 
 class GraspDiffusionFields(nn.Module):
-    ''' Grasp DiffusionFields. SE(3) diffusion model to learn 6D grasp distributions. See
+    """ Grasp DiffusionFields. SE(3) diffusion model to learn 6D grasp distributions. See
         SE(3)-DiffusionFields: Learning cost functions for joint grasp and motion optimization through diffusion
-    '''
+    """
     def __init__(self, vision_encoder, geometry_encoder, points, feature_encoder, decoder):
         super().__init__()
         ## Register points to map H to points ##

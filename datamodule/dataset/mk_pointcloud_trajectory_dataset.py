@@ -1,19 +1,18 @@
+import torch
 from pathlib import Path
 from typing import Dict
 from cprint import *
-import numpy as np
-import torch
 from datamodule.dataset.base import DATASET, DatasetType, MKPointCloudStateBase
 from datamodule.dataset.transforms import make_default_transform
 
 @DATASET.register()
 class MKPointCloudTrajectoryDataset(MKPointCloudStateBase):
-    '''
-    This dataset is used exclusively for validating. Each element in the dataset represents a trajectory start and 
-    scene. There is no supervision because this is used to produce an entire rollout and check for success. When 
-    doing validation, we care more about success than we care about matching the expert's behavior (which is a key 
-    difference from training).
-    '''
+    """ This dataset is used exclusively for M2Diffuser training and evaluation, and MPiNets and evaluation. 
+    Each element in the dataset represents a trajectory start and scene. There is no supervision because this 
+    is used to produce an entire rollout and check for success. When doing validation, we care more about 
+    success than we care about matching the expert's behavior (which is a key difference from training).
+    """
+
     def __init__(
         self,
         cfg: dict, 
@@ -21,34 +20,36 @@ class MKPointCloudTrajectoryDataset(MKPointCloudStateBase):
         dataset_type: DatasetType, 
         **kwargs: Dict,
     ):
-        '''
-        Arguements:
-            directory {Path} -- The path to the root of the data directory
-            num_agent_points {int} -- The number of points to sample from the agent
-            num_scene_points {int} -- The number of points to sample from the scene
-            num_object_points {int} -- The number of points to sample from the object
-            dataset_type {DatasetType} -- What type of dataset this is
-        '''
+        """ The function initializes the dataset instance with configuration, data directory, and dataset type, 
+        and sets up the default data transformation.
+
+        Args:
+            cfg [dict]: Configuration dictionary for the dataset.
+            data_dir [Path]: The path to the root of the data directory.
+            dataset_type [DatasetType]: The type of dataset (e.g., train, val, test).
+            **kwargs [Dict]: Additional keyword arguments for dataset customization.
+
+        Return:
+            None: This is an initializer and does not return a value.
+        """
         super().__init__(cfg, data_dir, dataset_type, **kwargs)
         self.transform = make_default_transform(cfg, dataset_type)
 
     def __len__(self):
-        '''
-        Necessary for Pytorch. For this dataset, the length is the total number of problems.
-        '''
+        """ Returns the total number of expert motions in the dataset.
+        """
         return self.num_trajectories
     
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        '''
-        Required by Pytorch. Queries for data at a particular index. Note that in this dataset, 
-        the index always corresponds to the trajectory index.
+        """ This function retrieves a data sample at a specific index, corresponding to a start configuration 
+        (for MPiNets training) and complete trajectory (for M2Diffuser training and evaluation) in the dataset. 
 
-        Arguements:
-            idx {int} -- The index
-        Returns:
-            Dict[str, torch.Tensor] -- Returns a dictionary that can be assembled by the data 
-                                       loader before using in training.
-        '''
+        Args:
+            idx [int]: The index of the trajectory to retrieve.
+
+        Return:
+            Dict[str, torch.Tensor]: A dictionary containing the trajectory sample.
+        """
         trajectory_idx, timestep = idx, 0
         item = self.get_inputs(trajectory_idx, timestep)
         if self.transform is not None:

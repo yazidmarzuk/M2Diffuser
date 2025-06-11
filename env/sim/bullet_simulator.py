@@ -420,18 +420,6 @@ class BulletRobot:
 
 
 class BulletMecKinova(BulletRobot):
-    """
-    MecKinova Joints ID:
-    [('world', -1), ('virtual_base_x', 0), ('virtual_base_y', 1), ('virtual_base_theta', 2), 
-    ('virtual_base_center', 3), ('base_link', 4), ('base_link_arm', 5), ('shoulder_link', 6), 
-    ('half_arm_1_link', 7), ('half_arm_2_link', 8), ('forearm_link', 9), 
-    ('spherical_wrist_1_link', 10), ('spherical_wrist_2_link', 11), ('bracelet_link', 12), 
-    ('end_effector_link', 13), ('camera_link', 14), ('camera_depth_frame', 15), 
-    ('camera_color_frame', 16), ('robotiq_arg2f_base_link', 17), ('left_outer_knuckle', 18), 
-    ('left_outer_finger', 19), ('left_inner_finger', 20), ('left_inner_finger_pad', 21), 
-    ('left_inner_knuckle', 22), ('right_outer_knuckle', 23), ('right_outer_finger', 24), 
-    ('right_inner_finger', 25), ('right_inner_finger_pad', 26), ('right_inner_knuckle', 27)]
-    """
 
     JOINTS_NAMES = [
         'base_y_base_x', 

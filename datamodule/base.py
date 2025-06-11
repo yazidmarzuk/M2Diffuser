@@ -1,6 +1,6 @@
+import pytorch_lightning as pl
 from typing import Dict
 from utils.registry import Registry
-import pytorch_lightning as pl
 
 DATAMODULE = Registry('datamodule')
 
@@ -8,8 +8,10 @@ def create_datamodule(cfg: dict, slurm: bool, **kwargs: Dict) -> pl.LightningDat
     """ Create a `torch.utils.data.Dataset` object from configuration.
 
     Args:
-        cfg: configuration object, dataset configuration
-        slurm: on slurm platform or not. This field is used to specify the data path
+        cfg [dict]: Configuration object containing dataset settings.
+        slurm [bool]: Indicates whether the code is running on a SLURM platform, used to specify the data path.
+        **kwargs [Dict]: Additional keyword arguments for the datamodule.
+        pl.LightningDataModule: A LightningDataModule object that has loaded the designated dataset.
     
     Return:
         A Dataset object that has loaded the designated dataset.

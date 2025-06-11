@@ -14,7 +14,7 @@ def meanpool(x, dim=-1, keepdim=False):
 
 
 class VNNPointnet2(nn.Module):
-    ''' PointNet-2 Net '''
+    """ PointNet-2 Net """
     def __init__(self, pointnet_radius=0.1, hidden_dim=512, in_features=3,
                  out_features = 512, device='cpu'):
         super().__init__()
@@ -30,13 +30,13 @@ class VNNPointnet2(nn.Module):
 
 
 class VNN_ResnetPointnet(nn.Module):
-    ''' DGCNN-based VNN vision_encoder network with ResNet blocks.
+    """ DGCNN-based VNN vision_encoder network with ResNet blocks.
 
     Args:
         c_dim (int): dimension of latent code c
         dim (int): input points dimension
         hidden_dim (int): hidden dimension of the network
-    '''
+    """
 
     def __init__(self, c_dim=128, dim=3, hidden_dim=128, k=20, meta_output=None, device = 'cpu'):
         super().__init__()

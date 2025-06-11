@@ -1,12 +1,4 @@
-# Object Classes :['Cup', 'Mug', 'Fork', 'Hat', 'Bottle', 'Bowl', 'Car', 'Donut', 'Laptop', 'MousePad', 'Pencil',
-# 'Plate', 'ScrewDriver', 'WineBottle','Backpack', 'Bag', 'Banana', 'Battery', 'BeanBag', 'Bear',
-# 'Book', 'Books', 'Camera','CerealBox', 'Cookie','Hammer', 'Hanger', 'Knife', 'MilkCarton', 'Painting',
-# 'PillBottle', 'Plant','PowerSocket', 'PowerStrip', 'PS3', 'PSP', 'Ring', 'Scissors', 'Shampoo', 'Shoes',
-# 'Sheep', 'Shower', 'Sink', 'SoapBottle', 'SodaCan','Spoon', 'Statue', 'Teacup', 'Teapot', 'ToiletPaper',
-# 'ToyFigure', 'Wallet','WineGlass','Cow', 'Sheep', 'Cat', 'Dog', 'Pizza', 'Elephant', 'Donkey', 'RubiksCube', 'Tank', 'Truck', 'USBStick']
-
 import random
-
 
 def parse_args():
     p = configargparse.ArgumentParser()
@@ -59,11 +51,6 @@ def sample_pointcloud(obj_id=0, obj_class='Mug'):
     rot = sampled_rot.as_matrix()
     rot_quat = sampled_rot.as_quat()
 
-    """
-    print(rot.shape) # [3, 3]
-    print(P.shape) # [1000, 3]
-    """
-
     P = np.einsum('mn,bn->bm', rot, P)
     P *= 8.
     P_mean = np.mean(P, 0)
@@ -82,19 +69,12 @@ def sample_pointcloud(obj_id=0, obj_class='Mug'):
 
 
 if __name__ == '__main__':
-    """
-    python scripts/sample/generate_pointcloud_6d_grasp_poses.py --n_grasps 10 --obj_id 0 --obj_class 'ScrewDriver'
-    """
     import copy
     import configargparse
     args = parse_args()
-    """
-    Namespace(config_filepath=None, device='cuda:0', eval_sim=False, model='grasp_dif_multi', 
-    n_grasps='20', obj_class='ScrewDriver', obj_id=0)
-    """
 
     EVAL_SIMULATION = args.eval_sim
-    #! isaac gym 需要在 pytorch 之前导入
+
     # isaac gym has to be imported here as it is supposed to be imported before torch
     if (EVAL_SIMULATION):
         # Alternatively: Evaluate Grasps in Simulation:

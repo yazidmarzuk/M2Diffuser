@@ -99,15 +99,9 @@ class UNetModel(nn.Module):
         assert len(x_t.shape) == 3
 
         ## time embedding
-        t_emb = timestep_embedding(ts, self.d_model) #! 对 timestep 进行正弦编码
-        t_emb = self.time_embed(t_emb) #! 扩展到对应的维度
-
-        h = rearrange(x_t, 'b l c -> b c l') #! in training, x_t [32, 62, 79] -> h [32, 79, 62]
-        """
-        conv1d 对最后一个维度进行卷积,以文本为例, conv1d 是将文本的序列维度和 embedding 维度进行压缩, 序列长度这一维按照正常卷积,
-        embeding 这一维由设置根据输出的 outchannel 决定, 此处设置的是 1, 一般计算前, 请将序列这一维度 permute 到最后一维, 
-        embedding 这一维度调整到倒数第二维.
-        """
+        t_emb = timestep_embedding(ts, self.d_model)
+        t_emb = self.time_embed(t_emb) 
+        h = rearrange(x_t, 'b l c -> b c l') 
         
         h = self.in_layers(h) # <B, d_model, L> [32, 512, 62]
         # print(h.shape, cond.shape) # <B, d_model, L>, <B, T , c_dim>

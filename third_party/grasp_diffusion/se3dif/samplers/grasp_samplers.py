@@ -94,11 +94,10 @@ class ApproximatedGrasp_AnnealedLD():
 
 
 class Grasp_AnnealedLD():
-    def __init__(self, model, device='cpu', batch=10, dim=3, k_steps=1,
-                 T=200, T_fit=5, deterministic=False):
-        """
-        generator = Grasp_AnnealedLD(model, batch=batch, T=70, T_fit=50, k_steps=2, device=device)
-        """
+    def __init__(
+        self, model, device='cpu', batch=10, dim=3, k_steps=1,
+        T=200, T_fit=5, deterministic=False
+    ):
         self.model = model
         self.device = device
         self.dim = dim # 3
@@ -168,24 +167,18 @@ class Grasp_AnnealedLD():
         ## 1.Sample initial SE(3) ##
         if batch is None:
             batch = self.batch
-        H0 = SO3_R3().sample(batch).to(self.device, torch.float32) #! 相当于扩散模型的第一步，随机采样 SE(3)
+        H0 = SO3_R3().sample(batch).to(self.device, torch.float32) 
 
         ## 2.Langevin Dynamics (We evolve the data as [R3, SO(3)] pose) ##
         Ht = H0
         if save_path:
             trj_H = Ht[None,...]
 
-        #! 快速收敛
         for t in range(self.T):
             Ht = self._step(Ht, t, noise_off=self.deterministic)
             if save_path:
                 trj_H = torch.cat((trj_H, Ht[None,:]), 0)
-            # if save_path:
-            #     return Ht, trj_H
-            # else:
-            #     return Ht
 
-        #! 微调，也可以用在我们的代码上面，让最后一帧收敛更好
         for t in range(self.T_fit):
             Ht = self._step(Ht, self.T, noise_off=True)
             if save_path:
@@ -195,7 +188,6 @@ class Grasp_AnnealedLD():
             return Ht, trj_H
         else:
             return Ht
-
 
 
 if __name__ == '__main__':

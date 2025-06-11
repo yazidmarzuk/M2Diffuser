@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
-
-from se3dif.utils import SO3_R3
 import theseus as th
+from se3dif.utils import SO3_R3
 from theseus import SO3
 
 
@@ -27,7 +26,7 @@ class ProjectedSE3DenoisingLoss():
 
         ## 1. H to vector ##
         H_th = SO3_R3(R=H[...,:3, :3], t=H[...,:3, -1])
-        xw = H_th.log_map() #! [400, 6]
+        xw = H_th.log_map()
 
         ## 2. Sample perturbed datapoint ##
         random_t = torch.rand_like(xw[...,0], device=xw.device) * (1. - eps) + eps
@@ -41,8 +40,10 @@ class ProjectedSE3DenoisingLoss():
         with torch.set_grad_enabled(True):
             perturbed_H = SO3_R3().exp_map(perturbed_x).to_matrix()
             energy = model(perturbed_H, random_t)
-            grad_energy = torch.autograd.grad(energy.sum(), perturbed_x,
-                                              only_inputs=True, retain_graph=True, create_graph=True)[0]
+            grad_energy = torch.autograd.grad(
+                energy.sum(), perturbed_x,
+                only_inputs=True, retain_graph=True, create_graph=True
+            )[0]
 
         # Compute L1 loss
         z_target = z/std[...,None]

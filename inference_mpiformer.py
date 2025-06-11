@@ -168,7 +168,6 @@ def rollout_mpiformer(
     ## for 'pick' task, we search locations with the least grasping energy in each trajectory
     if task_type == 'pick':
         # load grasp-energy model 
-        #! grasp_energy_model 需要传入
         args = Namespace(device=device, model='grasp_dif_multi', batch=L)
         model_args = {'device': device, 'pretrained_model': args.model}
         grasp_energy_model = load_model(model_args)
@@ -262,8 +261,6 @@ def run_inference(config: DictConfig) -> None:
     with torch.no_grad():
         mdl.eval()
         for i, data in enumerate(dl):
-            # if i >= 30: #! 用第几个数据训练就给几 83 20(有问题) 92
-            #     continue
             for key in data:
                 if torch.is_tensor(data[key]):
                     data[key] = data[key].to(device)

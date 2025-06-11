@@ -1,6 +1,6 @@
-from typing import Any, Dict, List
 import torch
 import numpy as np
+from typing import Any, Dict, List
 from trimesh import transform_points
 from datamodule.dataset.base import DatasetType
 from env.agent.mec_kinova import MecKinova
@@ -8,7 +8,7 @@ from utils.meckinova_utils import transform_configuration_numpy, transform_traje
 
 
 class Compose(object):
-    """ Composes several transforms together
+    """ Composes several transforms together.
     """
 
     def __init__(self, transforms: Any) -> None:
@@ -21,13 +21,12 @@ class Compose(object):
 
 
 class NumpyToTensor(object):
-    """ Convert numpy data to torch.Tensor data
+    """ Convert `numpy` data to `torch.Tensor` data.
     """
     def __init__(self, **kwargs) -> None:
         pass
 
     def __call__(self, data: Dict, *args: List, **kwargs: Dict) -> dict:
-        #! 后期放置的需要加上
         tensor_float_list = [
             'agent_init_pos', 'traj_len', 'grasping_pose', 'T_aw', 'T_ow', 'T_oa', 'scene_pc_a',
             'object_pc_a', 'agent_pc_a', 'x', 'configuration', 'supervision', 'start', 'end', 
@@ -47,7 +46,7 @@ class NumpyToTensor(object):
 
 
 class RandomRotationZ(object):
-    """ Random rotation z augmentation
+    """ Random rotation z augmentation.
     """
     def __init__(self, **kwargs) -> None:
         self.angle = [0, 0, 1]
@@ -91,7 +90,7 @@ class RandomRotationZ(object):
 
 
 class NormalizeToCenterPath(object):
-    """ Normalize scene to center
+    """ Normalize scene to center.
     """
     def __init__(self, **kwargs) -> None:
         self.gravity_dim = kwargs['gravity_dim'] 
@@ -128,7 +127,7 @@ class NormalizeToCenterPath(object):
 
 
 class NormalizePolicyData(object):
-    """ Normalize the configuration and trajectory data
+    """ Normalize the configuration and trajectory data.
     """
     def __init__(self, **kwargs) -> None:
         pass
@@ -169,8 +168,9 @@ def make_default_transform(cfg: dict, datatype: DatasetType) -> Compose:
     """ Make default transform
 
     Args:
-        cfg: global configuration
-        phase: process phase
+        cfg [dict]: Global configuration dictionary containing transformation settings.
+        datatype [DatasetType]: The type of dataset phase (e.g., TRAIN, VAL, TEST) for which to create the transforms.
+        Compose: A composed set of transformation operations to be applied to the dataset.
     
     Return:
         Composed transforms.

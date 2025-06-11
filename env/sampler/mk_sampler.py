@@ -1,24 +1,21 @@
-import logging
 import os
 import torch
-import numpy as np
+import logging
 import trimesh
+import numpy as np
 from env.agent.mec_kinova import MecKinova
-import torch
 from utils.torch_urdf import TorchURDF
 from geometrout.primitive import Sphere
 from utils.transform import transform_pointcloud_torch
 
 class MecKinovaSampler:
-    """
-    This class allows for fast pointcloud sampling from the surface of a robot.
+    """ This class allows for fast pointcloud sampling from the surface of a robot.
     At initialization, it loads a URDF and samples points from the mesh of each link.
     The points per link are based on the (very approximate) surface area of the link.
 
     Then, after instantiation, the sample method takes in a batch of configurations
     and produces pointclouds for each configuration by running fk on a subsample
     of the per-link pointclouds that are established at initialization.
-
     """
     # ignore_link = ["left_inner_finger_pad", "right_inner_finger_pad"]
 
@@ -29,11 +26,39 @@ class MecKinovaSampler:
         use_cache=False,
         max_points=4096,
     ):
+        """ Initializes the sampler object, sets the logging level for trimesh, 
+        stores the number of fixed points, and calls the internal initialization method.
+
+        Args:
+            device [Any]: The device to be used for computation (e.g., 'cpu' or 'cuda').
+            num_fixed_points [int, optional]: The number of fixed points to use. Defaults to None.
+            use_cache [bool, optional]: Whether to use caching for internal operations. Defaults to False.
+            max_points [int, optional]: The maximum number of points allowed. Defaults to 4096.
+
+        Return:
+            None
+        """
         logging.getLogger("trimesh").setLevel("ERROR")
         self.num_fixed_points = num_fixed_points
         self._init_internal_(device, use_cache, max_points)
 
-    def _init_internal_(self, device, use_cache, max_points):
+    def _init_internal_(
+        self,
+        device, 
+        use_cache: bool, 
+        max_points: int
+    ):
+        """ Initializes internal data structures for the robot model, loads meshes or creates geometric primitives for each link,
+        samples surface points on each link proportional to their surface area, and optionally caches the sampled points for future use.
+
+        Args:
+            device [torch.device or str]: The device on which tensors and robot data should be loaded (e.g., 'cpu' or 'cuda').
+            use_cache [bool]: Whether to use cached sampled points if available, or generate and cache new ones.
+            max_points [int]: The maximum total number of points to sample across all robot links if num_fixed_points is not set.
+
+        Return:
+            None. The function sets up internal attributes such as self.points and may save sampled points to a cache file.
+        """
         self.device = device
         self.max_points = max_points
         self.robot = TorchURDF.load(
@@ -88,6 +113,16 @@ class MecKinovaSampler:
             np.save(file_name, points_to_save)
     
     def _get_cache_file_name_(self):
+        """ Returns the file path for the cached point cloud data based on the number of fixed points.
+        If the number of fixed points is specified, returns the corresponding fixed point cloud cache file path.
+        Otherwise, returns the full point cloud cache file path.
+
+        Args:
+            self: Instance of the class containing configuration and cache directory information.
+
+        Return:
+            Path: The file path to the cached point cloud data as a Path object.
+        """
         if self.num_fixed_points is not None:
             return (
                 MecKinova.pointcloud_cache
@@ -97,6 +132,15 @@ class MecKinovaSampler:
             return MecKinova.pointcloud_cache / "full_point_cloud.npy"
 
     def _init_from_cache_(self, device):
+        """ Loads cached point cloud data from a file if it exists, and initializes the `self.points` attribute
+        with the loaded data as PyTorch tensors on the specified device.
+
+        Args:
+            device [torch.device or str]: The device on which the loaded tensors should be allocated.
+
+        Return:
+            bool: Returns True if the cache file exists and the data is successfully loaded; otherwise, returns False.
+        """
         file_name = self._get_cache_file_name_()
         if not file_name.is_file():
             return False
@@ -112,19 +156,14 @@ class MecKinovaSampler:
         return True
     
     def sample(self, config, num_points=None):
-        """
-        Samples points from the surface of the robot by calling fk.
+        """ Samples points from the surface of the robot by calling fk.
 
-        Parameters
-        ----------
-        config : Tensor of length (M,) or (N, M) where M is the number of  actuated joints.
-                 For example, if using the MecKinova, M is 10
-        num_points : Number of points desired
+        Args:
+            config [Tensor]: Tensor of shape (M,) or (N, M), where M is the number of actuated joints. Represents the robot configuration(s).
+            num_points [int, optional]: Number of points to sample from the robot surface. If None, uses the default number of fixed points.
 
-        Returns
-        -------
-        N x num points x 3 pointcloud of robot points
-
+        Return:
+            Tensor: Returns a point cloud of shape (N, num_points, 3) representing sampled points on the robot surface.
         """
         assert bool(self.num_fixed_points is None) ^ bool(num_points is None) 
         if config.ndim == 1:
@@ -151,19 +190,14 @@ class MecKinovaSampler:
         return pc[:, np.random.choice(pc.shape[1], num_points, replace=False), :]
     
     def sample_base(self, config, num_points=None):
-        """
-        Samples points from the base surface of the robot by calling fk.
+        """ Samples points from the base surface of the robot by calling fk.
 
-        Parameters
-        ----------
-        config : Tensor of length (M,) or (N, M) where M is the number of  actuated joints.
-                 For example, if using the MecKinova, M is 10
-        num_points : Number of points desired
+        Args:
+            config [Tensor]: Tensor of shape (M,) or (N, M), where M is the number of actuated joints. Represents the robot configuration(s).
+            num_points [int, optional]: Number of points to sample from the robot base. If None, all points are returned.
 
-        Returns
-        -------
-        N x num points x 3 pointcloud of robot base points
-
+        Return:
+            Tensor: A point cloud of shape (N, num_points, 3) representing sampled points from the robot base surface.
         """
         assert bool(self.num_fixed_points is None) ^ bool(num_points is None) 
         if config.ndim == 1:
@@ -191,18 +225,13 @@ class MecKinovaSampler:
         return pc[:, np.random.choice(pc.shape[1], num_points, replace=False), :]
     
     def sample_arm(self, config, num_points=None):
-        """
-        Samples points from the arm surface of the robot by calling fk.
+        """ Samples points from the arm surface of the robot by calling fk.
 
-        Parameters
-        ----------
-        config : Tensor of length (M,) or (N, M) where M is the number of  actuated joints.
-                 For example, if using the MecKinova, M is 10
-        num_points : Number of points desired
-
-        Returns
-        -------
-        N x num points x 3 pointcloud of robot arm points
+        Args:
+            config [Tensor]: A tensor of shape (M,) or (N, M), where M is the number of actuated joints. Represents one or more joint configurations.
+            num_points [int, optional]: The number of points to sample from the arm surface for each configuration. If None, all available points are returned.
+        Return:
+            Tensor: A tensor of shape (N, num_points, 3) representing the sampled point cloud(s) of the robot arm surface for each configuration.
 
         """
         assert bool(self.num_fixed_points is None) ^ bool(num_points is None) 
@@ -231,21 +260,16 @@ class MecKinovaSampler:
         return pc[:, np.random.choice(pc.shape[1], num_points, replace=False), :]
     
     def sample_gripper(self, config, num_points=None):
-        """
-        Samples points from the gripper surface of the robot by calling fk.
-        It does the same thing as sample_end_effector, except that it takes 
-        points from the cache and performs coordinate transformations.
+        """ Samples points from the robot gripper's surface by performing forward kinematics (FK) 
+        and transforming cached points to the world frame. This function is similar to 
+        `sample_end_effector` but uses cached gripper points and applies coordinate transformations.
 
-        Parameters
-        ----------
-        config : Tensor of length (M,) or (N, M) where M is the number of  actuated joints.
-                 For example, if using the MecKinova, M is 10
-        num_points : Number of points desired
+        Args:
+            config [Tensor]: A tensor of shape (M,) or (N, M), where M is the number of actuated joints. Represents the robot's joint configuration(s).
+            num_points [int, optional]: The number of gripper surface points to sample. If None, all available points are returned.
 
-        Returns
-        -------
-        N x num points x 3 pointcloud of robot gripper points
-
+        Return:
+            Tensor: A tensor of shape (N, num_points, 3) representing the sampled 3D point cloud of the robot gripper for each configuration.
         """
         assert bool(self.num_fixed_points is None) ^ bool(num_points is None) 
         if config.ndim == 1:
@@ -273,6 +297,16 @@ class MecKinovaSampler:
         return pc[:, np.random.choice(pc.shape[1], num_points, replace=False), :]
     
     def end_effector_pose(self, config, frame="end_effector_link") -> torch.Tensor:
+        """ Computes and returns the pose of the specified end effector frame for the given robot configuration(s).
+        If a single configuration is provided, it is reshaped to a batch of one for processing.
+
+        Args:
+            config [torch.Tensor]: The robot joint configuration(s), either as a 1D tensor (single configuration) or 2D tensor (batch of configurations).
+            frame [str]: The name of the end effector frame for which the pose is to be computed. Defaults to "end_effector_link".
+
+        Return:
+            torch.Tensor: The pose(s) of the specified end effector frame corresponding to the input configuration(s).
+        """
         if config.ndim == 1:
             config = config.unsqueeze(0)
         cfg = config
@@ -280,12 +314,31 @@ class MecKinovaSampler:
         return fk[frame]
     
     def _get_eef_cache_file_name_(self, eef_points_num):
+        """ Generates the cache file path for the end-effector (EEF) point cloud based on the specified number of EEF points.
+
+        Args:
+            eef_points_num [int]: The number of points in the EEF point cloud.
+
+        Return:
+            Path object representing the file path to the cached EEF point cloud .npy file.
+        """
         return (
             MecKinova.pointcloud_cache
             / f"eef_point_cloud_{eef_points_num}.npy"
         )
 
     def _init_from_eef_cache_(self, device, eef_points_num):
+        """ Initializes the end-effector (EEF) points from a cached file if it exists. 
+        Loads the cached EEF points and converts them into PyTorch tensors on the specified device. 
+        If the cache file does not exist, the function returns False.
+
+        Args:
+            device [torch.device or str]: The device on which the tensors should be allocated (e.g., 'cpu' or 'cuda').
+            eef_points_num [int]: The number of EEF points, used to determine the cache file name.
+
+        Return:
+            bool: Returns True if the EEF points were successfully loaded from the cache; otherwise, returns False.
+        """
         eef_file_name = self._get_eef_cache_file_name_(eef_points_num)
         if not os.path.exists(eef_file_name):
             return False
@@ -300,8 +353,17 @@ class MecKinovaSampler:
         return True
     
     def sample_end_effector(self, config, sample_points=512, use_cache=False):
-        """
-        End Effector PointClouds Sample.
+        """ Samples point clouds from the end effector meshes or boxes of a robot, 
+        transforms them according to the given configuration, and returns the transformed point clouds. 
+        Optionally uses or saves a cache of sampled points for efficiency.
+
+        Args:
+            config [torch.Tensor]: The robot configuration(s) for which to compute the forward kinematics and transform the sampled points. 
+            Shape can be (n,) or (batch_size, n).
+            sample_points [int]: Number of points to sample from the end effector surfaces. Default is 512.
+            use_cache [bool]: Whether to use cached sampled points if available, and save new samples to cache. Default is False.
+        Return:
+            torch.Tensor: The transformed point clouds of the end effector(s), concatenated along the point dimension. Shape is (batch_size, sample_points, 3).
         """
         self.eef_points = {}
         if use_cache and self._init_from_eef_cache_(self.device, sample_points):
@@ -373,11 +435,27 @@ class MecKinovaSampler:
 
 
 class MecKinovaCollisionSampler:
+    """MecKinovaCollisionSampler is a utility class for sampling and computing collision-related geometric representations
+    for a Kinova robot model using sphere approximations. It loads the robot's URDF, constructs sets of spheres to
+    approximate the robot's links, and provides methods to sample surface points from these spheres and compute their
+    transformed positions given a robot configuration.
+    """
     def __init__(
         self,
         device,
         margin=0.0,
     ):
+        """ Initializes the sampler for the MecKinova robot, loading its URDF model, 
+        configuring collision spheres with optional margin, and precomputing 
+        surface sample points for each robot link.
+
+        Args:
+            device [torch.device or str]: The device on which tensors and models will be loaded (e.g., 'cpu' or 'cuda').
+            margin [float, optional]: Additional margin to add to the radius of each collision sphere. Default is 0.0.
+
+        Return:
+            None. Initializes class attributes including the robot model, collision spheres, and sampled surface points.
+        """
         logging.getLogger("trimesh").setLevel("ERROR")
         self.robot = TorchURDF.load(
             str(MecKinova.urdf_path), lazy_load_meshes=True, device=device
@@ -423,13 +501,24 @@ class MecKinovaCollisionSampler:
             )
     
     def sample(self, config, n):
+        """ Generates a point cloud by sampling points from the robot's links given a configuration.
+        The function first ensures the configuration tensor has the correct shape, concatenates
+        default prismatic values, computes forward kinematics for each link, transforms the
+        predefined link points, and finally samples 'n' points from the resulting point cloud.
+
+        Args:
+            config [torch.Tensor]: The input configuration tensor for the robot. Shape: (num_joints,) or (batch_size, num_joints).
+            n [int]: The number of points to sample from the generated point cloud.
+
+        Return:
+            torch.Tensor: A tensor containing 'n' sampled points from the robot's link point cloud. Shape: (batch_size, n, 3).
+        """
         if config.ndim == 1:
             config = config.unsqueeze(0)
         cfg = torch.cat(
             (
                 config,
-                self.default_prismatic_value
-                * torch.ones((config.shape[0], 2), device=config.device),
+                self.default_prismatic_value * torch.ones((config.shape[0], 2), device=config.device),
             ),
             dim=1,
         )
@@ -446,6 +535,16 @@ class MecKinovaCollisionSampler:
         return pc[:, np.random.choice(pc.shape[1], n, replace=False), :]
 
     def compute_spheres(self, config):
+        """ Computes the transformed positions of predefined spheres attached to robot links for a given configuration.
+        The function processes each sphere group, applies the corresponding forward kinematics transformation, and returns the transformed points.
+
+        Args:
+            config [torch.Tensor]: The robot configuration tensor. Should be of shape (n, d) or (d,) where n is the batch size and d is the configuration dimension.
+
+        Return:
+            List[Tuple[float, torch.Tensor]]: A list of tuples, each containing a sphere radius and a tensor of transformed sphere points for each 
+            configuration in the batch.
+        """
         if config.ndim == 1:
             config = config.unsqueeze(0)
         cfg  = config

@@ -349,10 +349,10 @@ class PointcloudAcronymAndSDFDataset(Dataset):
         loc = sdf_dict['loc']
         scale = sdf_dict['scale']
         xyz = (sdf_dict['xyz'] + loc)*scale*mesh_scale
-        rix = np.random.permutation(xyz.shape[0]) #! 对序列重新排序
+        rix = np.random.permutation(xyz.shape[0])
         xyz = xyz[rix[:self.n_occ], :]
         sdf = sdf_dict['sdf'][rix[:self.n_occ]]*scale*mesh_scale
-        return xyz, sdf #! 取了 1000 个点的坐标和其对应的 sdf，这里的 1000 和物体的点云数 1000 不一样
+        return xyz, sdf
 
     def _get_mesh_pcl(self, grasp_obj):
         mesh = grasp_obj.load_mesh()

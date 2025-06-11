@@ -142,9 +142,9 @@ class VNLinear(nn.Module):
         self.map_to_feat = nn.Linear(in_channels, out_channels, bias=False)
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         x_out = self.map_to_feat(x.transpose(1, -1)).transpose(1, -1)
         return x_out
 
@@ -159,9 +159,9 @@ class VNLeakyReLU(nn.Module):
         self.negative_slope = negative_slope
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         d = self.map_to_dir(x.transpose(1, -1)).transpose(1, -1)
         dotprod = (x * d).sum(2, keepdim=True)
         mask = (dotprod >= 0).float()
@@ -196,9 +196,9 @@ class VNLinearLeakyReLU(nn.Module):
         self.negative_slope = negative_slope
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         # Conv
         p = self.map_to_feat(x.transpose(1, -1)).transpose(1, -1)
         # InstanceNorm
@@ -224,9 +224,9 @@ class VNBatchNorm(nn.Module):
             self.bn = nn.BatchNorm2d(num_features)
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         norm = torch.sqrt((x * x).sum(2))
         norm_bn = self.bn(norm)
         norm = norm.unsqueeze(2)
@@ -245,9 +245,9 @@ class VNMaxPool(nn.Module):
             self.map_to_dir = nn.Linear(in_channels, in_channels, bias=False)
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         d = self.map_to_dir(x.transpose(1, -1)).transpose(1, -1)
         dotprod = (x * d).sum(2, keepdim=True)
         idx = dotprod.max(dim=-1, keepdim=False)[1]
@@ -274,9 +274,9 @@ class VNStdFeature(nn.Module):
             self.vn_lin = nn.Linear(in_channels // 4, 3, bias=False)
 
     def forward(self, x):
-        '''
+        """
         x: point features of shape [B, N_feat, 3, N_samples, ...]
-        '''
+        """
         z0 = self.vn1(x)
         z0 = self.vn2(z0)
         z0 = self.vn_lin(z0.transpose(1, -1)).transpose(1, -1)
@@ -311,13 +311,13 @@ class VNStdFeature(nn.Module):
 
 # Resnet Blocks
 class VNResnetBlockFC(nn.Module):
-    ''' Fully connected ResNet Block class.
+    """ Fully connected ResNet Block class.
 
     Args:
         size_in (int): input dimension
         size_out (int): output dimension
         size_h (int): hidden dimension
-    '''
+    """
 
     def __init__(self, size_in, size_out=None, size_h=None):
         super().__init__()

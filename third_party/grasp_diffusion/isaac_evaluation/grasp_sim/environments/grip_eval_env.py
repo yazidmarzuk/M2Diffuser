@@ -15,9 +15,9 @@ from isaac_evaluation.grasp_sim.robots.gripper_only import GripperOnly
 
 
 class GraspingGymEnv():
-    '''
+    """
     Environment to evaluate the Grasping of a certain object
-    '''
+    """
     def __init__(self, gym, sim, env, isaac_base, curr_env_number, args=None):
 
         ## Set Args

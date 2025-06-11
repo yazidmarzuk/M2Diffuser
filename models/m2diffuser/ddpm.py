@@ -120,7 +120,6 @@ class DDPM(pl.LightningModule):
         noise = torch.randn_like(data['x'], device=self.device)
 
         ## calculate x_t, forward diffusion process
-        #! data['x'] 和 x_t ([32, 62, 79]), 其中 32 是 batch 的大小, 62 是 horizontion + start + end, 79 相当于 config
         x_t = self.q_sample(x0=data['x'], t=ts, noise=noise)
 
         ## apply observation before forwarding to eps model
@@ -212,7 +211,7 @@ class DDPM(pl.LightningModule):
             Predict data in the previous step, i.e., $x_{t-1}$
         """
         B, *_ = x_t.shape
-        batch_timestep = torch.full((B, ), t, device=self.device, dtype=torch.long) #! torch.full(size, fill_value）
+        batch_timestep = torch.full((B, ), t, device=self.device, dtype=torch.long)
 
         if 'cond' in data:
             ## use precomputed conditional feature

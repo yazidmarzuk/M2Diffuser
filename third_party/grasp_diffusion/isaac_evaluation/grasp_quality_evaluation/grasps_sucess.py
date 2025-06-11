@@ -122,9 +122,9 @@ class GraspSuccessEvaluator():
 
 
 class GraspController():
-    '''
+    """
      A controller to evaluate the grasping
-    '''
+    """
     def __init__(self, env, hand_cntrl_type='position', finger_cntrl_type='torque', n_envs = 0):
         self.env = env
 

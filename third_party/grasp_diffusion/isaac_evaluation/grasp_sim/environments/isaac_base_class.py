@@ -182,10 +182,10 @@ class IsaacGymWrapper():
         return desired_transform, r.as_euler('ZYX')
 
     def reset(self, state=None):
-        '''
+        """
         The reset function receives a list of dictionaries with the desired reset state for the different elements
         in the environment.
-        '''
+        """
         for idx, env_i in enumerate(self.envs):
             if state is not None:
                 env_i.reset(state[idx])
@@ -195,10 +195,10 @@ class IsaacGymWrapper():
         return self._evolve_step()
 
     def reset_robot(self, state=None, ensure_gripper_reset=False):
-        '''
+        """
         The reset function receives a list of dictionaries with the desired reset state for the different elements
         in the environment. This function only resets the robot
-        '''
+        """
         # if gripper reset should be ensured, we require two timesteps:
         if (ensure_gripper_reset):
             for idx, env_i in enumerate(self.envs):
@@ -218,10 +218,10 @@ class IsaacGymWrapper():
         return self._evolve_step()
 
     def reset_obj(self, state=None):
-        '''
+        """
         The reset function receives a list of dictionaries with the desired reset state for the different elements
         in the environment. This function only resets the robot
-        '''
+        """
         for idx, env_i in enumerate(self.envs):
             if state is not None:
                 env_i.reset_obj(state[idx])

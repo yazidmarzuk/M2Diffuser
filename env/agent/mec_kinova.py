@@ -8,6 +8,8 @@ from yourdfpy import URDF, Link
 from utils.path import RootPath
 
 class MecKinova:
+    """ MecKinova class for handling the Mec_kinova robot model.
+    """
     JOINTS_NAMES = [
         'base_y_base_x', 
         'base_theta_base_y', 
@@ -186,6 +188,9 @@ class MecKinova:
     pointcloud_cache = RootPath.AGENT / "Mec_kinova" / "pointcloud"
 
     def __init__(self):
+        """ Initializes the Mec_kinova class by setting the name, loading the URDF file, 
+        and initializing the scene.
+        """
         self.name = "Mec_kinova"
         self._urdf_path = str(MecKinova.urdf_path)
         self.urdf = URDF.load(self._urdf_path)
@@ -193,10 +198,18 @@ class MecKinova:
     
     @property
     def trimesh(self) -> trimesh.Trimesh:
+        """ This property generates and returns a `trimesh.Trimesh` object representing the current scene of the URDF model.
+        It extracts the mesh from the URDF scene, processes the vertex colors, and constructs a new Trimesh object.
+
+        Args:
+            None
+
+        Return:
+            trimesh.Trimesh: A Trimesh object containing the vertices, faces, and vertex colors of the current URDF scene mesh.
+        """
         self._scene = self.urdf.scene
         self._scene_trimesh = self._scene.dump(concatenate=True)
         vertex_colors = np.asarray(self._scene_trimesh.visual.to_color().vertex_colors)[:, :3] / 255
-        # vertex_colors = np.expand_dims(np.array([0.118, 0.118, 0.118]), 0).repeat(vertex_colors.shape[0], 0)
         return trimesh.Trimesh(
             vertices=self._scene_trimesh.vertices,
             faces=self._scene_trimesh.faces,
@@ -208,6 +221,17 @@ class MecKinova:
         self,
         config: Union[List[int], np.ndarray],
     ):
+        """ Updates the robot configuration using the provided joint values. 
+        The configuration is validated to match the expected degrees of freedom (DOF), 
+        and then mapped to the corresponding joint names before updating the URDF configuration.
+
+        Args:
+            config [Union[List[int], np.ndarray]]: 
+                The new joint configuration values. Must have a length equal to the robot's DOF.
+
+        Return:
+            None. The function updates the internal URDF configuration with the new joint values.
+        """
         cfg = {}
         assert np.asarray(config).shape[0] == MecKinova.DOF, "Configuration dimension is wrong."
         for i in range(MecKinova.DOF):
@@ -218,8 +242,15 @@ class MecKinova:
         self,
         config: Optional[Union[List[int], np.ndarray]]=None,
     ) -> np.ndarray:
-        """
-        Get pose of the end-effector.
+        """ Get the pose (transformation matrix) of the end-effector ("robotiq_arg2f_base_link") relative to the "world" frame.
+        If a configuration is provided, update the robot's configuration before computing the pose.
+
+        Args:
+            config [Optional[Union[List[int], np.ndarray]]]: 
+                Optional joint configuration to update the robot's state before retrieving the end-effector pose.
+
+        Return:
+            np.ndarray: The transformation matrix representing the pose of the end-effector in the "world" frame.
         """
         if config is None:
             return self.urdf.get_transform(
@@ -234,6 +265,18 @@ class MecKinova:
             )
     
     def _simple_trimesh(self, link_trimesh, color:Optional[str]=None):
+        """ This function creates a new trimesh.Trimesh object from a given link_trimesh, 
+        optionally overriding its vertex colors with a specified color. It supports 
+        different visual types for the input mesh and allows for simple color customization.
+
+        Args:
+            link_trimesh [trimesh.Trimesh]: The input mesh object whose geometry and visual information are used.
+            color [Optional[str]]: The color to override the mesh's vertex colors. Supported values are 
+                'red', 'green', 'blue', 'grey', and 'black'. If None, the original colors are used.
+
+        Return:
+            trimesh.Trimesh: A new mesh object with the same geometry as link_trimesh and possibly updated vertex colors.
+        """
         if isinstance(link_trimesh.visual, trimesh.visual.color.ColorVisuals):
             vertex_colors = link_trimesh.visual.vertex_colors
         elif isinstance(link_trimesh.visual, trimesh.visual.texture.TextureVisuals):
@@ -263,6 +306,16 @@ class MecKinova:
         )
 
     def get_eef_trimesh(self, config:Optional[Union[List[int], np.ndarray]]=None, color:Optional[str]=None):
+        """ Generates a trimesh representation of the end effector based on the current or provided configuration.
+        Optionally applies a specified color to the mesh.
+
+        Args:
+            config [Optional[Union[List[int], np.ndarray]]]: The configuration to update the end effector pose. If None, uses the current configuration.
+            color [Optional[str]]: The color to apply to the end effector mesh. If None, no color is applied.
+
+        Return:
+            trimesh.Trimesh: A simplified trimesh object representing the end effector with the specified configuration and color.
+        """
         eef_trimesh = trimesh.Scene()
         if config is not None: self.update_config(config)
 
@@ -275,6 +328,17 @@ class MecKinova:
         return self._simple_trimesh(eef_trimesh, color)
     
     def get_base_trimesh(self, config:Optional[Union[List[int], np.ndarray]]=None, color:Optional[str]=None):
+        """ Generates a trimesh representation of the robot's base link. 
+        Optionally updates the configuration before generating the mesh 
+        and applies a specified color if provided.
+
+        Args:
+            config [Optional[Union[List[int], np.ndarray]]]: Optional configuration to update the robot's state before generating the mesh.
+            color [Optional[str]]: Optional color to apply to the generated mesh.
+
+        Return:
+            trimesh.Trimesh: A simplified trimesh object representing the robot's base link with the specified configuration and color.
+        """
         base_trimesh = trimesh.Scene()
         if config is not None: self.update_config(config)
         base_trimesh.add_geometry(self.get_link('base_link'))
@@ -286,6 +350,15 @@ class MecKinova:
         config: Union[List[int], np.ndarray],
         num_sampled_points: int = 1024,
     ) -> np.ndarray:
+        """ Samples a specified number of points from the surface of the agent's mesh after updating its configuration.
+
+        Args:
+            config [Union[List[int], np.ndarray]]: The configuration of the agent, must have a length equal to the degrees of freedom (DOF).
+            num_sampled_points [int]: The number of points to sample from the surface of the agent's mesh (default is 1024).
+
+        Return:
+            np.ndarray: An array of sampled points from the agent's mesh surface.
+        """
         cfg = {}
         assert np.asarray(config).shape[0] == MecKinova.DOF
         for i in range(MecKinova.DOF):
@@ -297,8 +370,14 @@ class MecKinova:
         return agent_points
     
     def get_link(self, link_name: str):
-        """
-        Get the trimesh object in the agent frame.
+        """ Retrieves the trimesh object of a specified link in the agent's frame. 
+        Loads the mesh file, applies scaling and transformation according to the URDF definition.
+
+        Args:
+            link_name [str]: The name of the link whose mesh is to be retrieved.
+
+        Return:
+            trimesh.Trimesh: The transformed trimesh object corresponding to the specified link.
         """
         link: Link = self.urdf.link_map[link_name]
         link_visuals = link.visuals[0]
@@ -327,6 +406,17 @@ class MecKinova:
         eef_link_name: str="robotiq_arg2f_base_link",
         sample_num: int=1024,
     ) -> np.ndarray:
+        """ Samples a specified number of points from the surface of the end-effector (EEF) link mesh.
+        Optionally updates the robot configuration before sampling.
+
+        Args:
+            config [Optional[Union[List[int], np.ndarray]]]: The robot configuration to update before sampling. If None, uses the current configuration.
+            eef_link_name [str]: The name of the end-effector link from which to sample points. Default is "robotiq_arg2f_base_link".
+            sample_num [int]: The number of points to sample from the EEF surface. Default is 1024.
+
+        Return:
+            np.ndarray: An array of sampled points from the EEF link surface.
+        """
         if config is not None:
             self.update_config(config)
         eef_link_trimesh = self.get_link(eef_link_name)
@@ -335,6 +425,15 @@ class MecKinova:
 
     @staticmethod
     def within_limits(cfg):
+        """ Checks whether the given joint configuration is within the defined joint limits of the MecKinova robot, 
+        allowing for a small numerical buffer to account for floating point precision errors.
+
+        Args:
+            cfg [np.ndarray]: The joint configuration to be checked, typically a NumPy array of joint positions.
+
+        Return:
+            bool: True if all joint values are within the specified limits (with buffer), False otherwise.
+        """
         # We have to add a small buffer because of float math
         return np.all(cfg >= MecKinova.JOINT_LIMITS[:, 0] - 1e-5) and np.all(cfg <= MecKinova.JOINT_LIMITS[:, 1] + 1e-5)
     
@@ -343,19 +442,25 @@ class MecKinova:
         batch_trajectory: Union[np.ndarray, torch.Tensor],
         limits: Tuple[float, float] = (-1, 1),
     ) -> Union[np.ndarray, torch.Tensor]:
-        """
-        Normalizes joint angles to be within a specified range according to the MecKinova's joint limits. 
+        """ This function normalizes joint angles in a batch of trajectories to a specified range, 
+        according to the MecKinova's joint limits. It supports both numpy arrays and torch tensors 
+        as input, and preserves the input's type and shape.
 
-        Arguements:
-            batch_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input       
-        Raises:
-            NotImplementedError -- Raises an error if another data type (e.g. a list) is passed in
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The target range to which the joint angles will be normalized. Default is (-1, 1).
+
+        Return:
+            Union[np.ndarray, torch.Tensor]: 
+                The normalized joint angles, with the same type and shape as the input.
+
+            NotImplementedError: 
+                If the input is not a torch.Tensor or np.ndarray.
         """
         if isinstance(batch_trajectory, torch.Tensor):
             return MecKinova._normalize_joints_torch(batch_trajectory, limits=limits)
@@ -369,17 +474,22 @@ class MecKinova:
         batch_trajectory: torch.Tensor,
         limits: Tuple[float, float] = (-1, 1),
     ) -> torch.Tensor:
-        """
-        Normalizes joint angles to be within a specified range according to the MecKinova's joint limits. 
+        """ This function normalizes joint angles in a batch of trajectories to a specified range, 
+        based on the MecKinova robot's joint limits. It supports single configurations, 
+        batches of configurations, or batched time-series data.
 
-        Arguements:
-            batch_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The target range to which the joint angles will be normalized. Default is (-1, 1).
+
+        Return:
+            torch.Tensor: 
+                The normalized joint trajectories with the same shape and type as the input.
         """
         assert isinstance(batch_trajectory, torch.Tensor)
         meckinova_limits = torch.as_tensor(MecKinova.JOINT_LIMITS).type_as(batch_trajectory)
@@ -398,17 +508,21 @@ class MecKinova:
         batch_trajectory: np.ndarray,
         limits: Tuple[float, float] = (-1, 1),
     ) -> np.ndarray:
-        """
-        Normalizes joint angles to be within a specified range according to the MecKinova's joint limits. This is the numpy version. 
+        """ This function normalizes joint angles of the MecKinova robot to a specified range using the robot's joint limits. 
+        It supports single configurations, batches, or batched time-series of configurations in numpy array format.
 
-        Arguements:
-            batch_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The target range to which the joint angles will be normalized. Default is (-1, 1).
+
+        Return:
+            np.ndarray: 
+                The normalized joint angles with the same shape as the input.
         """
         assert isinstance(batch_trajectory, np.ndarray)
         meckinova_limits = MecKinova.JOINT_LIMITS
@@ -427,20 +541,24 @@ class MecKinova:
         batch_trajectory: Union[np.ndarray, torch.Tensor],
         limits: Tuple[float, float] = (-1, 1),
     ) -> Union[np.ndarray, torch.Tensor]:
-        """
-        Unnormalizes joint angles from a specified range back into the MecKinova's joint limits.
-        This is the inverse of `normalize_joints`.
+        """ This function unnormalizes joint angles from a specified normalized range back to the MecKinova's actual joint limits.
+        It serves as the inverse operation of `normalize_joints`, supporting both numpy arrays and torch tensors with flexible batch dimensions.
 
-        Arguements:
-            batch_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits        
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input        
-        Raises:
-            NotImplementedError -- Raises an error if another data type (e.g. a list) is passed in
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            Union[np.ndarray, torch.Tensor]: 
+                The unnormalized joint trajectories, with the same shape and type as the input.
+
+            NotImplementedError: 
+                If the input is not a torch.Tensor or np.ndarray.
         """
         if isinstance(batch_trajectory, torch.Tensor):
             return MecKinova._unnormalize_joints_torch(batch_trajectory, limits=limits)
@@ -454,18 +572,23 @@ class MecKinova:
         batch_trajectory: torch.Tensor,
         limits: Tuple[float, float] = (-1, 1),
     ) -> torch.Tensor:
-        """
-        Unnormalizes joint angles from a specified range back into the MecKinova's joint limits.
-        This is the torch version and the inverse of `_normalize_joints_torch`.
+        """ This function unnormalizes joint angles from a specified normalized range back to the MecKinova robot's actual joint limits.
+        It supports input tensors representing a single configuration, a batch of configurations, or a batched time-series of configurations.
+        The function is the inverse operation of `_normalize_joints_torch` and is implemented using PyTorch.
 
-        Arguements:
-            batch_trajectory {torch.Tensor} -- A batch of trajectories. Can have dims
-                                               1) [10] if a single configuration
-                                               2) [B, 10] if a batch of configurations
-                                               3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits        
-        Returns:
-            torch.Tensor -- A tensor with the same dimensions as the input
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            torch.Tensor: 
+                The unnormalized joint configurations mapped back to the MecKinova's joint limits, 
+                with the same shape as the input tensor.
         """
         assert isinstance(batch_trajectory, torch.Tensor)
         meckinova_limits = torch.as_tensor(MecKinova.JOINT_LIMITS).type_as(batch_trajectory)
@@ -474,8 +597,6 @@ class MecKinova:
             or (batch_trajectory.ndim == 2 and batch_trajectory.size(1) == MecKinova.DOF)
             or (batch_trajectory.ndim == 3 and batch_trajectory.size(2) == MecKinova.DOF)
         )
-        # assert torch.all(batch_trajectory >= limits[0])
-        # assert torch.all(batch_trajectory <= limits[1])
         meckinova_limit_range = meckinova_limits[:, 1] - meckinova_limits[:, 0]
         meckinova_lower_limit = meckinova_limits[:, 0]
         for _ in range(batch_trajectory.ndim - 1):
@@ -491,18 +612,20 @@ class MecKinova:
         batch_trajectory: np.ndarray,
         limits: Tuple[float, float] = (-1, 1),
     ) -> np.ndarray:
-        """
-        Unnormalizes joint angles from a specified range back into the MecKinova's joint limits.
-        This is the torch version and the inverse of `_normalize_joints_numpy`.
+        """ This function unnormalizes joint angles from a specified normalized range back into the MecKinova's joint limits.
+        It is the NumPy version and serves as the inverse of `_normalize_joints_numpy`.
 
-        Arguements:
-            batch_trajectory {torch.Tensor} -- A batch of trajectories. Can have dims
-                                               1) [10] if a single configuration
-                                               2) [B, 10] if a batch of configurations
-                                               3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits       
-        Returns:
-            torch.Tensor -- A tensor with the same dimensions as the input
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            np.ndarray: An array with the same dimensions as the input, containing the unnormalized joint angles within MecKinova's joint limits.
         """
         assert isinstance(batch_trajectory, np.ndarray)
         meckinova_limits = MecKinova.JOINT_LIMITS
@@ -511,8 +634,6 @@ class MecKinova:
             or (batch_trajectory.ndim == 2 and batch_trajectory.shape[1] == MecKinova.DOF)
             or (batch_trajectory.ndim == 3 and batch_trajectory.shape[2] == MecKinova.DOF)
         )
-        # assert np.all(batch_trajectory >= limits[0])
-        # assert np.all(batch_trajectory <= limits[1])
         meckinova_limit_range = meckinova_limits[:, 1] - meckinova_limits[:, 0]
         meckinova_lower_limit = meckinova_limits[:, 0]
         for _ in range(batch_trajectory.ndim - 1):
@@ -528,19 +649,24 @@ class MecKinova:
         batch_delta_trajectory: Union[np.ndarray, torch.Tensor],
         limits: Tuple[float, float] = (-1, 1),
     ) -> Union[np.ndarray, torch.Tensor]:
-        """
-        Normalizes delta joint angles to be within a specified range according to the MecKinova's delta joint limits. 
+        """ This function normalizes delta joint angles to a specified range according to MecKinova's delta joint limits.
+        It supports both single and batched inputs in either numpy array or torch tensor formats.
 
-        Arguements:
-            batch_delta_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of delta trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input       
-        Raises:
-            NotImplementedError -- Raises an error if another data type (e.g. a list) is passed in
+        Args:
+            batch_trajectory [Union[np.ndarray, torch.Tensor]]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            Union[np.ndarray, torch.Tensor]: 
+                The normalized delta trajectories with the same shape and type as the input.
+
+            NotImplementedError: 
+                If the input is not a torch.Tensor or np.ndarray.
         """
         if isinstance(batch_delta_trajectory, torch.Tensor):
             return MecKinova._normalize_actions_torch(batch_delta_trajectory, limits=limits)
@@ -554,17 +680,21 @@ class MecKinova:
         batch_delta_trajectory: torch.Tensor,
         limits: Tuple[float, float] = (-1, 1),
     ) -> torch.Tensor:
-        """
-        Normalizes delta joint angles to be within a specified range according to the MecKinova's delta joint limits. 
+        """ This function normalizes delta joint angles (actions) for the MecKinova robot to a specified range, 
+        based on the robot's delta joint limits. 
 
-        Arguements:
-            batch_delta_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of delta trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input
+        Args:
+            batch_delta_trajectory [torch.Tensor]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            torch.Tensor: 
+                The normalized delta joint angles, with the same shape and type as the input tensor.
         """
         assert isinstance(batch_delta_trajectory, torch.Tensor)
         meckinova_action_limits = torch.as_tensor(MecKinova.ACTION_LIMITS).type_as(batch_delta_trajectory)
@@ -583,18 +713,22 @@ class MecKinova:
         batch_delta_trajectory: np.ndarray,
         limits: Tuple[float, float] = (-1, 1),
     ) -> np.ndarray:
-        """
-        Normalizes delta joint angles to be within a specified range according to the MecKinova's delta joint limits. 
-        This is the numpy version. 
+        """ This function normalizes delta joint angles to a specified range according to the MecKinova's delta joint limits.
+        It supports input as a single configuration, a batch of configurations, or a batched time-series of configurations,
+        and returns the normalized values as a numpy array.
 
-        Arguements:
-            batch_delta_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of delta trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The new limits to map to
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input
+        Args:
+            batch_delta_trajectory [torch.Tensor]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            np.ndarray: 
+                The normalized delta joint angles with the same shape as the input.
         """
         assert isinstance(batch_delta_trajectory, np.ndarray)
         meckinova_action_limits = MecKinova.ACTION_LIMITS
@@ -613,20 +747,24 @@ class MecKinova:
         batch_delta_trajectory: Union[np.ndarray, torch.Tensor],
         limits: Tuple[float, float] = (-1, 1),
     ) -> Union[np.ndarray, torch.Tensor]:
-        """
-        Unnormalizes delta joint angles from a specified range back into the MecKinova's delta joint limits.
-        This is the inverse of `normalize_joints`.
+        """ This function unnormalizes delta joint angles from a specified normalized range back into the MecKinova's delta joint limits.
+        It is the inverse operation of `normalize_joints`. The function supports both numpy arrays and torch tensors, and preserves the input's shape and type.
 
-        Arguements:
-            batch_delta_trajectory {Union[np.ndarray, torch.Tensor]} -- A batch of delta_trajectories. Can have dims
-                                                                  1) [10] if a single configuration
-                                                                  2) [B, 10] if a batch of configurations
-                                                                  3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits        
-        Returns:
-            Union[np.ndarray, torch.Tensor] -- A tensor or numpy array with the same dimensions and type as the input        
-        Raises:
-            NotImplementedError -- Raises an error if another data type (e.g. a list) is passed in
+        Args:
+            batch_delta_trajectory [torch.Tensor]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            Union[np.ndarray, torch.Tensor]: 
+                The unnormalized delta joint angles, with the same dimensions and type as the input.
+
+            NotImplementedError: 
+                If the input is not a torch.Tensor or np.ndarray.
         """
         if isinstance(batch_delta_trajectory, torch.Tensor):
             return MecKinova._unnormalize_actions_torch(batch_delta_trajectory, limits=limits)
@@ -640,18 +778,21 @@ class MecKinova:
         batch_delta_trajectory: torch.Tensor,
         limits: Tuple[float, float] = (-1, 1),
     ) -> torch.Tensor:
-        """
-        Unnormalizes delta joint angles from a specified range back into the MecKinova's delta joint limits.
-        This is the torch version and the inverse of `_normalize_joints_torch`.
+        """ Unnormalizes delta joint angles from a specified normalized range back to the MecKinova's delta joint limits using PyTorch tensors.
+        This function is the inverse of `_normalize_joints_torch` and supports single, batched, or time-series batches of joint configurations.
 
-        Arguements:
-            batch_delta_trajectory {torch.Tensor} -- A batch of delta trajectories. Can have dims
-                                               1) [10] if a single configuration
-                                               2) [B, 10] if a batch of configurations
-                                               3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits        
-        Returns:
-            torch.Tensor -- A tensor with the same dimensions as the input
+        Args:
+            batch_delta_trajectory [torch.Tensor]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            torch.Tensor: 
+                The unnormalized delta joint angles with the same shape as the input tensor, mapped to the MecKinova's delta joint limits.
         """
         assert isinstance(batch_delta_trajectory, torch.Tensor)
         meckinova_action_limits = torch.as_tensor(MecKinova.ACTION_LIMITS).type_as(batch_delta_trajectory)
@@ -677,18 +818,21 @@ class MecKinova:
         batch_delta_trajectory: np.ndarray,
         limits: Tuple[float, float] = (-1, 1),
     ) -> np.ndarray:
-        """
-        Unnormalizes delta joint angles from a specified range back into the MecKinova's delta joint limits.
-        This is the torch version and the inverse of `_normalize_joints_numpy`.
+        """ Unnormalizes delta joint angles from a specified normalized range back to the MecKinova's delta joint limits.
+        This function is the inverse of `_normalize_joints_numpy` and operates on numpy arrays.
 
-        Arguements:
-            batch_delta_trajectory {torch.Tensor} -- A batch of delta trajectories. Can have dims
-                                               1) [10] if a single configuration
-                                               2) [B, 10] if a batch of configurations
-                                               3) [B, T, 10] if a batched time-series of configurations
-            limits {Tuple[float, float]} -- The current limits to map to the joint limits       
-        Returns:
-            torch.Tensor -- A tensor with the same dimensions as the input
+        Args:
+            batch_delta_trajectory [torch.Tensor]: 
+                A batch of joint trajectories. Supported shapes:
+                    - [10]: a single configuration
+                    - [B, 10]: a batch of configurations
+                    - [B, T, 10]: a batched time-series of configurations
+            limits [Tuple[float, float]]: 
+                The normalized range to map from (default: (-1, 1)).
+
+        Return:
+            np.ndarray: 
+                An array with the same dimensions as the input, containing the unnormalized delta joint angles within the MecKinova's action limits.
         """
         assert isinstance(batch_delta_trajectory, np.ndarray)
         meckinova_action_limits = MecKinova.ACTION_LIMITS

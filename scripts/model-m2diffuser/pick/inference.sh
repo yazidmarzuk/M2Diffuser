@@ -1,6 +1,6 @@
 CKPT_PATH=$1
 
-python inference_mpidiffuser.py hydra/job_logging=none hydra/hydra_logging=none \
+python inference_m2diffuser.py hydra/job_logging=none hydra/hydra_logging=none \
                 exp_dir=${CKPT_PATH} \
                 task=mk_m2diffuser_pick \
                 task.environment.sim_gui=false \

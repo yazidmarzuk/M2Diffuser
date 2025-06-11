@@ -1,15 +1,15 @@
 import json
-from pathlib import Path
-from typing import Optional, Dict
-from cprint import *
 import enum
 import os
 import sys
-from omegaconf import DictConfig
-from torch.utils.data import Dataset, DataLoader, random_split
 import numpy as np
 import torch
 import open3d as o3d
+from pathlib import Path
+from typing import Optional, Dict
+from cprint import *
+from omegaconf import DictConfig
+from torch.utils.data import Dataset, DataLoader, random_split
 import pytorch_lightning as pl
 from datamodule.base import DATAMODULE
 from datamodule.dataset.base import DatasetType, create_dataset
@@ -31,15 +31,18 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         slurm: bool, 
         **kwargs: Dict
     ):
-        """
-        Arguement:
-            data_dir {str} -- The directory with the data. Directory structure should be as defined in `PointCloudBase`
-            trajectory_key {str} -- The key in the hdf5 dataset that contains the expert trajectories
-            num_agent_points {int} -- The number of points to sample from the agent
-            num_scene_points {int} -- The number of points to sample from the scene
-            num_object_points {int} -- The number of points to sample from the object
-            random_scale {float} -- The standard deviation of the random normal noise to apply to the joints during training.
-            batch_size {int} -- The batch size
+        """ MKMotionPolicyDataModule is a PyTorch Lightning DataModule for managing motion policy datasets.
+        It handles dataset creation, data loading, and batching for training, validation, and testing phases.
+        The class supports different data collate functions based on the scene model and can be configured
+        for SLURM or local environments.
+
+        Args:
+            cfg [DictConfig]: Configuration object containing dataset and dataloader parameters.
+            slurm [bool]: Flag indicating whether to use SLURM-specific data directory.
+            **kwargs [Dict]: Additional keyword arguments.
+
+        Return:
+            None. This class is used to instantiate a DataModule object for PyTorch Lightning workflows.
         """
         super().__init__()
         self.slurm = slurm
@@ -55,12 +58,11 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
             self.collate_fn = collate_fn_general
     
     def setup(self, stage: Optional[str] = None):
-        """
-        A Pytorch Lightning method that is called per-device in when doing distributed training.
+        """ A Pytorch Lightning method that is called per-device in when doing distributed training.
 
-        Arguements:
-            stage {Optional[str]} -- Indicates whether we are in the training procedure or if 
-                                     we are doing ad-hoc testing.
+        Args:
+            stage [Optional[str]]: Indicates whether we are in the training procedure or if we are 
+            doing ad-hoc testing.
         """
         if stage == "fit" or stage is None:
             self.data_train = create_dataset(
@@ -81,8 +83,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
             )
     
     def train_dataloader(self) -> DataLoader:
-        """
-        A Pytorch lightning method to get the dataloader for training.
+        """ A Pytorch lightning method to get the dataloader for training.
 
         Returns:
             DataLoader -- The training dataloader
@@ -97,8 +98,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         )
     
     def val_dataloader(self) -> DataLoader:
-        """
-        A Pytorch lightning method to get the dataloader for validation.
+        """ A Pytorch lightning method to get the dataloader for validation.
 
         Returns:
             DataLoader -- The validation dataloader
@@ -112,8 +112,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         )
 
     def test_dataloader(self) -> DataLoader:
-        """
-        A Pytorch lightning method to get the dataloader for testing.
+        """ A Pytorch lightning method to get the dataloader for testing.
 
         Returns:
             DataLoader -- The dataloader for testing
@@ -127,8 +126,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         )
     
     def get_train_dataloader(self) -> DataLoader:
-        """
-        An external method to get the dataloader for training.
+        """ An external method to get the dataloader for training.
 
         Returns:
             DataLoader -- The training dataloader
@@ -137,8 +135,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         return self.train_dataloader()
     
     def get_val_dataloader(self) -> DataLoader:
-        """
-        An external method to get the dataloader for validation.
+        """ An external method to get the dataloader for validation.
 
         Returns:
             DataLoader -- The validation dataloader
@@ -147,8 +144,7 @@ class MKMotionPolicyDataModule(pl.LightningDataModule):
         return self.val_dataloader()
     
     def get_test_dataloader(self) -> DataLoader:
-        """
-        An external method to get the dataloader for testing.
+        """ An external method to get the dataloader for testing.
 
         Returns:
             DataLoader -- The dataloader for testing
