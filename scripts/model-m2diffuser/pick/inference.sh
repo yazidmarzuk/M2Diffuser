@@ -1,0 +1,33 @@
+CKPT_PATH=$1
+
+python inference_mpidiffuser.py hydra/job_logging=none hydra/hydra_logging=none \
+                exp_dir=${CKPT_PATH} \
+                task=mk_m2diffuser_pick \
+                task.environment.sim_gui=false \
+                task.environment.viz=false \
+                task.environment.viz_time=2 \
+                diffuser=ddpm \
+                diffuser.timesteps=50 \
+                diffuser.sample.converage.planning=false \
+                diffuser.sample.converage.optimization=true \
+                diffuser.sample.converage.ksteps=2 \
+                diffuser.sample.fine_tune.planning=true \
+                diffuser.sample.fine_tune.optimization=true \
+                diffuser.sample.fine_tune.timesteps=20 \
+                diffuser.sample.fine_tune.ksteps=2 \
+                model=m2diffuser_mk \
+                model.use_position_embedding=true \
+                optimizer=mk_motion_policy_optimization \
+                optimizer.scale_type=div_var \
+                optimizer.collision=true \
+                optimizer.collision_weight=0.05 \
+                optimizer.joint_limits=true \
+                optimizer.joint_limits_weight=0.1 \
+                optimizer.action_limit=true \
+                optimizer.action_limit_weight=0.1 \
+                optimizer.smoothness=true \
+                optimizer.smoothness_weight=0.1 \
+                planner=mk_motion_policy_planning \
+                planner.grasp_energy=true \
+                planner.grasp_energy_weight=0.00002 \
+                planner.grasp_energy_type='last_frame' \
