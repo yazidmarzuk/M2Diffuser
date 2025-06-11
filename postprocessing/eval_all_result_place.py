@@ -1,37 +1,20 @@
 import itertools
 import sys
-import copy
 import json
 import os
-import time
 import argparse
 import random
 import sys
 import numpy as np
-from cprint import cprint
 import torch
-import math
 from tqdm import tqdm
-from typing import Any, Dict, List, Optional, Sequence
-import trimesh
-import open3d as o3d
-import trimesh.creation
-from trimesh import transform_points
-import trimesh.sample
-from natsort import ns, natsorted
-import theseus as th
-import gc
-
+from typing import Any, Dict, Optional, Sequence
 sys.path.append("../")
 from env.scene.base_scene import Scene
 from env.agent.mec_kinova import MecKinova
-from utils.io import dict2json, mkdir_if_not_exists
+from utils.io import dict2json
 from utils.transform import SE3
-from third_party.grasp_diffusion.se3dif.utils.geometry_utils import SO3_R3
-from env.sampler.mk_sampler import MecKinovaSampler
-from third_party.grasp_diffusion.se3dif.visualization import grasp_visualization
-from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from third_party.grasp_diffusion.se3dif.samplers.grasp_samplers import Grasp_AnnealedLD
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -44,24 +27,12 @@ def parse_args():
     return opt
 
 def percent_true(arr: Sequence) -> float:
-    """
-    Returns the percent true of a boolean sequence or the percent nonzero of a numerical sequence
-
-    :param arr Sequence: The input sequence
-    :rtype float: The percent
-    """
     return 100 * np.count_nonzero(arr) / len(arr)
 
 def add_metric(group, key, value):
     group[key] = group.get(key, []) + [value]
 
 def eval_metrics(group: Dict[str, Any]) -> Dict[str, float]:
-    """
-    Calculates the metrics for a specific group
-
-    :param group Dict[str, Any]: The group of results
-    :rtype Dict[str, float]: The metrics
-    """
     # There was a problem with the previous code, so let's rework it here
     group["physical_violations"] = (
         group["collision"] 
@@ -219,14 +190,18 @@ def save_metrics(save_path: str, eval_group: Dict[str, Any]):
     dict2json(save_path, item)
 
 def calculate_iou(rect1, rect2, union_type:Optional[str]=None):
-    """
-    Calculate the Intersection over Union (IOU) of two rectangles.
+    """ Calculate the Intersection over Union (IOU) of two rectangles.
 
-    Parameters:
-    rect1, rect2: Each is a list or tuple of four values [x_min, x_max, y_min, y_max]
+    Args:
+        rect1 [list or tuple]: The first rectangle, specified as [x_min, x_max, y_min, y_max].
+        rect2 [list or tuple]: The second rectangle, specified as [x_min, x_max, y_min, y_max].
+        union_type [Optional[str]]: The type of union area to use for IOU calculation. 
+            If None, use the standard union (area1 + area2 - intersection). 
+            If 'area1', use only the area of rect1 as the union. 
+            If 'area2', use only the area of rect2 as the union.
 
-    Returns:
-    float: IOU value
+    Return:
+        np.float64: The Intersection over Union (IOU) value between the two rectangles.
     """
     x_min1, x_max1, y_min1, y_max1 = rect1
     x_min2, x_max2, y_min2, y_max2 = rect2
@@ -254,8 +229,16 @@ def calculate_iou(rect1, rect2, union_type:Optional[str]=None):
     return np.array(iou, dtype=np.float64)
 
 def calculate_iom(rect1, rect2, union_type:Optional[str]=None):
-    """
-    Calculate the Intersection over Minimum (IOU) of two rectangles.
+    """ Calculates the Intersection over Minimum (IOM) between two rectangles.
+        The IOM is defined as the area of intersection divided by the area of the smaller rectangle.
+
+    Args:
+        rect1 [tuple or list]: The first rectangle, specified as (x_min, x_max, y_min, y_max).
+        rect2 [tuple or list]: The second rectangle, specified as (x_min, x_max, y_min, y_max).
+        union_type [Optional[str]]: Reserved for future use; currently unused.
+
+    Return:
+        np.ndarray: The IOM value as a numpy float64 array.
     """
     x_min1, x_max1, y_min1, y_max1 = rect1
     x_min2, x_max2, y_min2, y_max2 = rect2

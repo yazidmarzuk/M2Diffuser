@@ -1,17 +1,9 @@
-import sys
-import copy
-import kaolin as kl
-import numpy as np
 import torch
-import open3d as o3d
 import pytorch_lightning as pl
 from torch import nn
 from omegaconf import DictConfig
-from pytorch_lightning.utilities.types import STEP_OUTPUT
 from pointnet2_ops.pointnet2_modules import PointnetSAModule
-from typing import Any, List, Tuple, Sequence, Dict, Callable
-from enum import Enum, auto 
-from datetime import datetime 
+from typing import Tuple, Dict
 from cprint import *
 from env.agent.mec_kinova import MecKinova
 from env.sampler.mk_sampler import MecKinovaSampler
@@ -23,13 +15,10 @@ from utils.transform import transform_pointcloud_torch
 
 @MODEL.register()
 class MotionPolicyNetworks(pl.LightningModule):
-    """
-    The architecture laid out here is the default architecture laid out in the
-    Motion Policy Network paper.
+    """ The architecture laid out here is the default architecture laid out in the Motion Policy Network paper.
     """
     def __init__(self, cfg: DictConfig, *args, **kwargs):
-        """
-        Constructs the model
+        """ Constructs the model
         """
         super().__init__()
         self.d_x = cfg.d_x
@@ -67,25 +56,23 @@ class MotionPolicyNetworks(pl.LightningModule):
         )
 
     def configure_optimizers(self):
-        """
-        A standard method in PyTorch lightning to set the optimizer
+        """ A standard method in PyTorch lightning to set the optimizer
         """
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
     def forward(self, xyz: torch.Tensor, q: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
-        """
-        Passes data through the network to produce an output.
+        """ Passes data through the network to produce an output.
+        
+        Args:
+            xyz [torch.Tensor]: Tensor representing the point cloud, with shape [B x N x 4], 
+                where B is the batch size, N is the number of points, and 4 corresponds to three geometric 
+                dimensions plus a segmentation mask.
+            q [torch.Tensor]: The current robot configuration, normalized between -1 and 1 according 
+                to each joint's range of motion.
 
-        Arguements:
-            xyz {torch.Tensor} -- Tensor representing the point cloud. Should have dimensions of [B x N x 4] 
-                                  where B is the batch size, N is the number of points and 4 is because there
-                                  are three geometric dimensions and a segmentation mask
-            q {torch.Tensor} -- The current robot configuration normalized to be between -1 and 1, according 
-                                to each joint's range of motion
-        Returns:
-            Tuple[torch.Tensor] -- The parameters of GMM to be used to sample the displacement and flg to be 
-                                    applied to the current configuration to get the position at the next step 
+        Return:
+            torch.Tensor: The predicted robot configuration, normalized between -1 and 1.
         """
         pc_encoding = self.point_cloud_encoder(xyz)
         feature_encoding = self.feature_encoder(q)
@@ -93,11 +80,13 @@ class MotionPolicyNetworks(pl.LightningModule):
         return self.decoder(z)
     
     def sample(self, q: torch.Tensor) -> torch.Tensor:
-        """
-        Samples a point cloud from the surface of all the robot's links
+        """ Samples a point cloud from the surface of all the robot's links given a batched configuration in joint space.
 
-        :param q torch.Tensor: Batched configuration in joint space
-        :rtype torch.Tensor: Batched point cloud of size [B, self.num_robot_points, 3]
+        Args:
+            q [torch.Tensor]: Batched configuration in joint space.
+
+        Return:
+            torch.Tensor: Batched point cloud of size [B, self.num_robot_points, 3], representing sampled points from the robot's surface.
         """
         assert self.mk_sampler is not None
         return self.mk_sampler.sample(q)
@@ -105,16 +94,20 @@ class MotionPolicyNetworks(pl.LightningModule):
     def training_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        A function called automatically by Pytorch Lightning during training. This 
-        function handles the forward pass, the loss calculation, and what to log.
+        """ This function is automatically called by PyTorch Lightning during training. 
+        It performs the forward pass, computes the loss (including collision and point match losses), 
+        transforms model outputs and targets to the agent's initial frame, and logs relevant metrics.
 
-        Arguements:
-            batch {Dict[str, torch.Tensor]} -- A data batch coming from the data loader, 
-                                               should already be on the correct device
-            batch_idx {int} -- The index of the batch (not used by this function)
-        Returns:
-            torch.Tensor -- The overall weighted loss (used for backprop)
+        Args:
+            batch [Dict[str, torch.Tensor]]: 
+                A data batch from the data loader, already on the correct device. 
+                Contains input point clouds, configurations, supervision signals, transformation matrices, 
+                SDF values, mesh centers, and scales.
+            batch_idx [int]: 
+                The index of the current batch (not used in this function).
+
+        Return:
+            torch.Tensor. The overall weighted loss tensor, used for backpropagation.
         """
         if self.mk_sampler is None:
             self.mk_sampler = MecKinovaSampler(self.device, self.num_agent_points, use_cache=True)
@@ -185,24 +178,21 @@ class MotionPolicyNetworks(pl.LightningModule):
     def validation_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        This is a Pytorch Lightning function run automatically across devices
-        during the validation loop
+        """ This is a Pytorch Lightning function run automatically across devices
+        during the validation loop.
         """
         pass
 
 
 class MPiNetsPointNet(pl.LightningModule):
-    """
-    Point cloud processing networks in mpinets.
+    """ Point cloud processing networks in mpinets.
     """
     def __init__(self):
         super().__init__()
         self._build_model()
     
     def _build_model(self):
-        """
-        Assembles the model design into a ModuleList
+        """ Assembles the model design into a ModuleList.
         """
         self.SA_modules = nn.ModuleList()
         self.SA_modules.append(
@@ -237,30 +227,37 @@ class MPiNetsPointNet(pl.LightningModule):
     @staticmethod
     def _break_up_pc(pc: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Breaks up the point cloud into the xyz coordinates and segmentation mask.
+            Splits the input point cloud tensor into xyz coordinates and feature tensors. 
+            The input tensor is expected to have at least 3 channels in the last dimension, 
+            where the first three represent the x, y, z coordinates, and the remaining channels 
+            represent additional features or segmentation masks.
 
-        Arguements:
-            pc {torch.Tensor} -- Tensor with shape [B, N, M] where M is larger than 3.
-                                 The first three dimensions along the last axis will be x, y, z
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor] -- one with just xyz and one with the corresponding features
+        Args:
+            pc [torch.Tensor]: Input tensor of shape [B, N, M], where B is the batch size, 
+                N is the number of points, and M >= 3 is the number of channels 
+                (with the first three being x, y, z coordinates).
+
+        Return:
+            Tuple[torch.Tensor, torch.Tensor]: 
+                - The first tensor contains only the xyz coordinates with shape [B, N, 3].
+                - The second tensor contains the remaining features, transposed to shape [B, M-3, N].
+        
         """
         xyz = pc[..., 0:3].contiguous() # Completely copy the tensor
         features = pc[..., 3:].transpose(1, 2).contiguous() # Transpose the tensor
         return xyz, features
     
     def forward(self, point_cloud: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass of the network.
+        """ This function performs the forward pass of the network. It processes the input point cloud tensor,
+        applies a series of set abstraction (SA) modules, and returns the final output after a fully connected layer.
 
-        Arguements:
-            point_cloud {torch.Tensor} -- Has dimensions (B, N, 4)
-                                          B is the batch size
-                                          N is the number of points
-                                          4 is x, y, z, segmentation_mask
-                                          This tensor must be on the GPU (CPU tensors not supported)
-        Returns:
-            torch.Tensor -- The output from the network
+        Args:
+            point_cloud [torch.Tensor]: Input tensor of shape (B, N, 4), where B is the batch size,
+                N is the number of points, and 4 corresponds to (x, y, z, segmentation_mask).
+                The tensor must be on the GPU.
+
+        Return:
+            torch.Tensor: The output tensor from the network after processing the input point cloud.
         """
         assert point_cloud.size(2) == 4
         xyz, features = self._break_up_pc(point_cloud)

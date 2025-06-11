@@ -31,18 +31,14 @@ class PointNetEnc(nn.Module):
             nn.init.xavier_normal_(self.togen_conv_layers[-1].weight)
 
     def forward(self, x):
-        # input: B * N * c
-        # output: B * latent_size
         x = x.transpose(1, 2)
         for i in range(len(self.conv_layers) - 1):
             x = self.conv_layers[i](x)
             x = self.bn_layers[i](x)
             x = self.activate_func(x)
         x = self.bn_layers[-1](self.conv_layers[-1](x))
-        x = torch.max(x, 2, keepdim=True)[0]  # B x self.feat_size x 1
+        x = torch.max(x, 2, keepdim=True)[0]
 
-        # x = x.view(-1, 1, self.layers_size[-1])
-        # forward token padding(togen) layer
         for i in range(len(self.togen_conv_layers) - 1):
             x = self.togen_conv_layers[i](x)
             x = self.togen_bn_layers[i](x)

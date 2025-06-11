@@ -2,12 +2,9 @@ import copy
 import os
 import trimesh
 import numpy as np
-import open3d as o3d
 from lxml import etree
 from typing import List, Union
-from math import cos, sin, pi
 from yourdfpy import URDF, Link
-from pathlib import Path
 from utils.transform import TransformationMatrix2QuaternionXYZ
 from utils.path import RootPath
 

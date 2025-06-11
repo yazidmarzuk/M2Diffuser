@@ -1,13 +1,8 @@
-from typing import Dict, List, Tuple
-
 import torch
 import math
+from typing import Dict, List
 
 def make_schedule_ddpm(timesteps: int, beta: List, beta_schedule: str, s=0.008) -> Dict:
-    """
-    'schedule_cfg': {'beta': [0.0001, 0.01], 'beta_schedule': 
-    'linear', 's': 0.008}
-    """
     assert beta[0] < beta[1] < 1.0
     if beta_schedule == 'linear':
         betas = torch.linspace(beta[0], beta[1], timesteps)
@@ -44,4 +39,3 @@ def make_schedule_ddpm(timesteps: int, beta: List, beta_schedule: str, s=0.008) 
 
 if __name__ == '__main__':
     make_schedule_ddpm(10, [0, 0.9], 'linear', **{'s': 0.01})
-    

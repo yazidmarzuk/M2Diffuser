@@ -9,7 +9,8 @@ from utils.path import RootPath
 sys.path.append("..")
 
 def compute_data_number(data_path:str, task_name:str) -> int:
-    """ Compute the number of data. """
+    """ Compute the number of data.
+    """
     data_num = 0
     scene_names = os.listdir(data_path)
 
@@ -38,7 +39,8 @@ def compute_data_number_in_scene_object_list(
     scene_list:List[str],
     object_list:List[str],
 ) -> int:
-    """ Compute the number of data. """
+    """ Compute the number of data.
+    """
     num = 0 # number of trajectories in seen scenes and objects
     scene_names = os.listdir(data_path)
     for scene_name in scene_names:
@@ -63,15 +65,15 @@ def compute_data_number_in_scene_object_list(
     return num
 
 def check_file(name:str, path:Optional[str]) -> bool:
-    """
-    Check whether the file or directory in path exists.
+    """ Check whether the file or directory in path exists.
 
-    Arguements:
-        name {str} -- Name of the file or directory that you want to check.
-        path {Optinal[str]} -- Path to be checked. If path is None, the current path is used by default.
+    Args:
+        name [str]: Name of the file or directory that you want to check.
+        path [Optinal[str]]: Path to be checked. If path is None, the current path is used by default.
+
     Returns:
-        bool -- Returns true if the path to be checked contains the destination file or directory. False is 
-                returned when the path to be checked does not contain the destination file or directory.      
+        bool. Returns true if the path to be checked contains the destination file or directory. False is 
+            returned when the path to be checked does not contain the destination file or directory.      
     """
     if path is None:
         path = os.getcwd()
@@ -86,7 +88,7 @@ def check_file(name:str, path:Optional[str]) -> bool:
         return False
 
 def compute_scene_sdf(scene: Scene, size: int=128) -> Dict:
-    """ Compute scene SDF value for collision loss computation
+    """ Compute scene SDF value for collision loss computation.
     """
     # NOTE: The floor cannot be considered when calculating SDF, 
     # because the floor and the agent must touch.

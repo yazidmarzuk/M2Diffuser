@@ -1,39 +1,44 @@
-import numpy as np
 import time
 import pickle
 from pathlib import Path
 import itertools
+import pybullet as p
+import numpy as np
+from cprint import *
 from eval.sparc import sparc
-from utils.transform import SE3, SO3
+from utils.transform import SE3
 from termcolor import colored
-import logging
-from geometrout.primitive import Cuboid, Sphere, Cylinder
+from geometrout.primitive import Sphere
 from typing import Sequence, Union, List, Tuple, Any, Dict, Optional
 from env.agent.mec_kinova import MecKinova
 from env.sim.bullet_simulator import Bullet
-from cprint import *
-import pybullet as p
 
 
 def percent_true(arr: Sequence) -> float:
-    """
-    Returns the percent true of a boolean sequence or the percent nonzero of a numerical sequence
+    """ Calculates the percentage of True values in a boolean sequence or the percentage of nonzero 
+    elements in a numerical sequence.
 
-    :param arr Sequence: The input sequence
-    :rtype float: The percent
+    Args:
+        arr [Sequence]: The input sequence, which can be a sequence of booleans or numerics.
+
+    Return:
+        float: The percentage of True or nonzero elements in the input sequence.
     """
     return 100 * np.count_nonzero(arr) / len(arr)
 
 
 class Evaluator:
-    """
-    This class can be used to evaluate a whole set of environments and data
+    """ This class can be used to evaluate a whole set of environments and data
     """
 
     def __init__(self, gui: bool = False):
-        """
-        Initializes the evaluator class
-        :param gui bool: Whether to visualize trajectories (and showing visually whether they are failures)
+        """ Initializes the evaluator class.
+
+        Args:
+            gui [bool]: Whether to enable GUI visualization for trajectories and visually indicate failures.
+
+        Return:
+            None. Initializes the evaluator class and sets up simulation environments and robots for evaluation.
         """
         self.sim = Bullet(gui=False)
         self.sim_robot = self.sim.load_robot(MecKinova)
@@ -66,14 +71,17 @@ class Evaluator:
         obstacles_path: str,
         obstacles_pose:Optional[SE3]=None,
     ):
-        """
-        Visualizes a trajectory and changes the color based on whether its a physical_success or failure
+        """ Visualizes a robot trajectory in a GUI, displaying obstacles and highlighting collision points.
+        The color of the visualization changes based on whether a collision occurs during the trajectory.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory to visualize
-        :param dt float: The approximate timestep to use when visualizing
-        :param target SE3: The target pose (in right gripper frame)
-        :param obstacles Union[Cuboid, Cylinder, Sphere]: The obstacles to visualize
-        :param physical_success bool: Whether the trajectory was a physical_success
+        Args:
+            dt [float]: The approximate timestep to use when visualizing the trajectory.
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to visualize, as a sequence of joint configurations.
+            obstacles_path [str]: The file path to the obstacle URDF to be loaded in the simulation.
+            obstacles_pose [Optional[SE3]]: The pose of the obstacles in the simulation environment.
+
+        Return:
+            None. The function visualizes the trajectory and obstacles in the GUI.
         """
         self.gui_sim.clear_all_obstacles()
         collision_ids = self.gui_sim.load_urdf_obstacle(obstacles_path, obstacles_pose)
@@ -93,22 +101,30 @@ class Evaluator:
             time.sleep(dt)
 
     def create_new_group(self, key: str):
-        """
-        Creates a new metric group (for a new setting, for example)
+        """ Creates a new metric group with the specified key, initializing an empty dictionary for the group,
+        and sets it as the current active group.
 
-        :param key str: The key for this metric group
+        Args:
+            key [str]: The key used to identify and create the new metric group.
+
+        Return:
+            None. The function updates the internal state of the object by adding a new group and setting it as current.
         """
         self.groups[key] = {}
         self.current_group_key = key
         self.current_group = self.groups[key]
 
     def in_collision(self, trajectory: Sequence[Union[Sequence, np.ndarray]]) -> bool:
-        """
-        Checks whether the trajectory is in collision according to all including
-        collision checkers (using AND between different methods)
+        """ Checks whether any configuration in the given trajectory results in a collision,
+        using all included collision checkers (logical AND across methods). Iterates through
+        each configuration, applies it to the simulated robot, and checks for collisions.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :rtype bool: Whether there is a collision
+        Args:
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be checked, 
+                where each element is a robot configuration.
+
+        Return:
+            bool: True if any configuration in the trajectory is in collision, otherwise False.
         """
         for i, q in enumerate(trajectory):
             self.sim_robot.marionette(q)
@@ -119,11 +135,15 @@ class Evaluator:
         return False
 
     def has_self_collision(self, trajectory: Sequence[Union[Sequence, np.ndarray]]) -> bool:
-        """
-        Checks whether there is a self collision
+        """ Checks whether any configuration in the given trajectory results in a self-collision for the robot.
+        Iterates through each configuration, applies it to the robot model, and checks for self-collision.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :rtype bool: Whether there is a self collision
+        Args:
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: 
+                The trajectory to be checked, where each element is a robot configuration.
+
+        Return:
+            bool: True if any configuration in the trajectory results in a self-collision, otherwise False.
         """
         for i, q in enumerate(trajectory):
             self.self_collision_robot.marionette(q)
@@ -134,12 +154,17 @@ class Evaluator:
         return False
 
     def get_collision_depths(self, trajectory: Sequence[Union[Sequence, np.ndarray]]) -> List[float]:
-        """
-        Get all the collision depths for a trajectory (sometimes can report strange
-        values due to inconsistent Bullet collision checking)
+        """ This function computes and returns all collision depths encountered along a given trajectory.
+        It iterates through each configuration in the trajectory, sets the robot to that configuration,
+        and collects the collision depths with respect to the specified obstacles.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :rtype List[float]: A list of all collision depths
+        Args:
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory, represented as a sequence 
+                of robot configurations.
+
+        Return:
+            List[float]: A list containing all collision depths detected along the trajectory.
+            
         """
         all_depths = []
         for i, q in enumerate(trajectory):
@@ -150,11 +175,14 @@ class Evaluator:
 
     @staticmethod
     def violates_joint_limits(trajectory: Sequence[Union[Sequence, np.ndarray]]) -> bool:
-        """
-        Checks whether any configuration in the trajectory violates joint limits
+        """ Checks whether any configuration in the given trajectory violates the joint limits.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :rtype bool: Whether there is a joint limit violation
+        Args:
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be checked, 
+                where each element represents a joint configuration.
+
+        Return:
+            bool: Returns True if any configuration in the trajectory violates the joint limits, otherwise returns False.
         """
         for i, q in enumerate(trajectory):
             if not MecKinova.within_limits(q):
@@ -164,12 +192,14 @@ class Evaluator:
     def has_physical_violation(
         self, trajectory: Sequence[Union[Sequence, np.ndarray]], 
     ) -> bool:
-        """
-        Checks whether there is any physical violation (collision, self collision, joint limit violation)
+        """ Checks whether the given trajectory has any physical violations, including collision with obstacles, 
+        self-collision, or violation of joint limits.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :param obstacles List[Union[Cuboid, Cylinder, Sphere]: The obstacles in the scene
-        :rtype bool: Whether there is at least one physical violation
+        Args:
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be checked for physical violations.
+
+        Return:
+            bool: Returns True if there is at least one physical violation in the trajectory; otherwise, returns False.
         """
         return (
             self.in_collision(trajectory[:-1,:])
@@ -183,12 +213,16 @@ class Evaluator:
         trajectory: Sequence[Union[Sequence, np.ndarray]], 
         dt: float
     ) -> Tuple[float, float]:
-        """
-        Calculate trajectory smoothness using SPARC
+        """ This function calculates the smoothness of a given trajectory using the SPARC (Spectral Arc Length) metric. 
+        It computes smoothness in both the configuration space and the end-effector space for a MecKinova agent.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :param dt float: The timestep in between consecutive steps of the trajectory
-        :rtype Tuple[float, float]: The SPARC in configuration space and end effector space
+        Args:
+            agent_object [object]: The agent object, which must be of type MecKinova.
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be evaluated, represented as a sequence of configurations.
+            dt [float]: The time interval between consecutive steps in the trajectory.
+
+        Return:
+            Tuple[float, float]: The SPARC smoothness values in configuration space and end-effector space, respectively.
         """
         assert agent_object is MecKinova, "Agent type is invalid"
         mec_kinova = MecKinova()
@@ -208,13 +242,19 @@ class Evaluator:
 
         return config_sparc, eff_sparc
 
-    def calculate_eff_path_lengths(self, agent_object: object, trajectory: Sequence[Union[Sequence, np.ndarray]]) -> Tuple[float, float]:
-        """
-        Calculate the end effector path lengths (position and orientation).
-        Orientation is in degrees.
+    def calculate_eff_path_lengths(
+        self, agent_object: object, 
+        trajectory: Sequence[Union[Sequence, np.ndarray]]
+    ) -> Tuple[float, float]:
+        """ Calculate the end effector path lengths for both position and orientation along a given trajectory.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :rtype Tuple[float, float]: The path lengths (position, orientation)
+        Args:
+            agent_object [object]: The agent object, must be of type MecKinova.
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The sequence of joint configurations representing the trajectory.
+
+        Return:
+            Tuple[float, float]: A tuple containing the total path length of the end effector's position (in the workspace) and 
+            the total orientation change (in degrees) along the trajectory.
         """
         assert agent_object is MecKinova, "Agent type is invalid"
         eff_poses = [SE3(self.robot.get_eff_pose(q)) for q in trajectory]
@@ -243,18 +283,21 @@ class Evaluator:
         obstacles_pose: Optional[SE3]=None,
         skip_metrics: bool = False,
     ):
-        """
-        Evaluates a single trajectory and stores the metrics in the current group.
-        Will visualize and print relevant info if `self.gui` is `True`
+        """ Evaluates a single trajectory for a robotic agent, computes various path and physical metrics, 
+        and stores the results in the current evaluation group. Optionally visualizes and prints 
+        relevant information if GUI is enabled.
 
-        :param trajectory Sequence[Union[Sequence, np.ndarray]]: The trajectory
-        :param dt float: The time step for the trajectory
-        :param target SE3: The target pose
-        :param obstacles Union[Cuboid, Cylinder, Sphere]: The obstacles in the scene
-        :param target_volume Union[Cuboid, Cylinder, Sphere]: The target volume for the trajectory
-        :param target_negative_volumes Union[Cuboid, Cylinder, Sphere]: Volumes that the target should definitely be outside
-        :param time float: The time taken to calculate the trajectory
-        :param skip_metrics bool: Whether to skip the path metrics (for example if it's a feasibility planner that failed)
+        Args:
+            dt [float]: The time step for the trajectory.
+            time [float]: The time taken to calculate the trajectory.
+            trajectory [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be evaluated.
+            agent_object [object]: The agent (robot) object for which the trajectory is evaluated.
+            obstacles_path [str]: The file path to the obstacles' URDF description.
+            obstacles_pose [Optional[SE3]]: The pose of the obstacles in the scene.
+            skip_metrics [bool]: Whether to skip the path metrics (e.g., if the planner failed).
+
+        Return:
+            dict: The evaluation result for the current trajectory, containing computed metrics.
         """
         # assert agent_object is MecKinova, "Agent type is invalid"
         def add_metric(key, value):
@@ -342,11 +385,19 @@ class Evaluator:
 
     @staticmethod
     def metrics(group: Dict[str, Any]) -> Dict[str, float]:
-        """
-        Calculates the metrics for a specific group
+        """ Calculates various evaluation metrics for a specific group of results, including success rates, 
+        smoothness, path lengths, collision statistics, and timing information. The function processes the 
+        input group dictionary, computes statistics, and returns a dictionary of metric names mapped to their computed values.
 
-        :param group Dict[str, Any]: The group of results
-        :rtype Dict[str, float]: The metrics
+        Args:
+            group [Dict[str, Any]]: A dictionary containing lists or arrays of evaluation results for a group, including keys such as 
+                "physical_success", "physical_violations", "config_smoothness", "eff_smoothness", 
+                "eff_position_path_length", "eff_orientation_path_length", "time", "collision", 
+                "joint_limit_violation", "self_collision", "collision_depths", "num_steps", and optionally "skips".
+
+        Return:
+            Dict[str, float]: A dictionary mapping metric names to their computed float values or tuples (mean, std) for metrics such 
+                as time, step time, path lengths, and collision depths.
         """
         physical_success = percent_true(group["physical_success"])
 
@@ -434,10 +485,13 @@ class Evaluator:
 
     @staticmethod
     def print_metrics(group: Dict[str, Any]):
-        """
-        Prints the metrics in an easy to read format
+        """ Print the evaluation metrics in a human-readable format.
 
-        :param group Dict[str, float]: The group of results
+        Args:
+            group [Dict[str, Any]]: A dictionary containing the group of evaluation results.
+
+        Return:
+            None. The function prints the formatted metrics to the standard output.
         """
         metrics = Evaluator.metrics(group)
         print(f"Total problems: {metrics['total']}")
@@ -470,12 +524,17 @@ class Evaluator:
         )
 
     def save_group(self, directory: str, test_name: str, key: Optional[str] = None):
-        """
-        Save the results of a single group
+        """ Saves the results of a single group to a specified directory as a pickle file. 
+        The group to be saved can be specified by the 'key' parameter; if not provided, 
+        the current group is used. The file is named using the test name and the current group key.
 
-        :param directory str: The directory in which to save the results
-        :param test_name str: The name of this specific test
-        :param key Optional[str]: The group key to use. If not specified will use the current group
+        Args:
+            directory [str]: The directory in which to save the results.
+            test_name [str]: The name of this specific test, used in the output filename.
+            key [Optional[str]]: The group key to use. If not specified, the current group is used.
+
+        Return:
+            None. The function saves the group metrics to a file.
         """
         if key is None:
             group = self.current_group
@@ -487,11 +546,14 @@ class Evaluator:
             pickle.dump(group, f)
 
     def save(self, directory: str, test_name: str):
-        """
-        Save all the groups
+        """ Save all metric groups to a pickle file.
 
-        :param directory str: The directory name in which to save results
-        :param test_name str: The test name (used as the file name)
+        Args:
+            directory [str]: The directory in which to save the results.
+            test_name [str]: The test name, used as the file name prefix.
+
+        Return:
+            None. The metric groups are saved to a file in the specified directory.
         """
         save_path = Path(directory) / f"{test_name}_metrics.pkl"
         print(f"Metrics will save to {save_path}")
@@ -499,10 +561,13 @@ class Evaluator:
             pickle.dump(self.groups, f)
 
     def print_group_metrics(self, key: Optional[str] = None):
-        """
-        Prints out the metrics for a specific group
+        """ Prints the metrics for a specified group. If no group key is provided, it uses the current group.
 
-        :param key Optional[str]: The group key (if none specified, will use current group)
+        Args:
+            key [Optional[str]]: The group key to select which group's metrics to print. If None, uses the current group.
+
+        Return:
+            The result of print_metrics for the selected group.
         """
         if key is not None:
             self.current_group = self.groups[key]
@@ -510,8 +575,15 @@ class Evaluator:
         return self.print_metrics(self.current_group)
 
     def print_overall_metrics(self):
-        """
-        Prints the metrics for the aggregated results over all groups
+        """ Aggregates metrics from all groups and prints the overall metrics.
+        It collects all unique metric keys across groups, aggregates their values,
+        and then prints the metrics for the combined results.
+
+        Args:
+            None
+
+        Return:
+            The result of the print_metrics function applied to the aggregated metrics (supergroup).
         """
         supergroup = {}
         keys = set()

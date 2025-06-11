@@ -1,26 +1,20 @@
-from argparse import Namespace
 import copy
-import time
-from typing import Dict
 import torch
 import torch.nn.functional as F
 import numpy as np
+import open3d as o3d
+import kaolin as kl
+from argparse import Namespace
+from typing import Dict
 from omegaconf import DictConfig
 from env.agent.mec_kinova import MecKinova
-import open3d as o3d
 from env.sampler.mk_sampler import MecKinovaSampler
 from models.base import PLANNER
 from models.planner.planner import Planner
 from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from third_party.grasp_diffusion.se3dif.samplers.grasp_samplers import Grasp_AnnealedLD
-from third_party.grasp_diffusion.se3dif.utils.geometry_utils import SO3_R3
-from third_party.grasp_diffusion.se3dif.visualization import grasp_visualization
 from utils.meckinova_utils import transform_trajectory_torch
-from utils.pointcloud_utils import get_pointclouds_boundaries
 from utils.transform import SE3, transform_pointcloud_torch
-import kaolin as kl
-import theseus as th
-from cprint import cprint
+
 
 @PLANNER.register()
 class MKMotionPolicyPlanner(Planner):
@@ -59,14 +53,14 @@ class MKMotionPolicyPlanner(Planner):
         self.sampler = MecKinovaSampler(self.device, num_fixed_points=32768, use_cache=True)
 
     def objective(self, x: torch.Tensor, data: Dict) -> torch.Tensor:
-        """ Compute gradient for planner guidance
+        """ Compute gradient for planner guidance.
 
         Args:
-            x: the denosied signal at current step, which is detached and is required grad
-            data: data dict that provides original data
+            x [torch.Tensor]: the denosied signal at current step, which is detached and is required grad.
+            data [Dict]: data dict that provides original data.
 
         Return:
-            The optimizer objective value of current step
+            torch.Tensor. The optimizer objective value of current step.
         """
         loss = 0
 
@@ -78,7 +72,6 @@ class MKMotionPolicyPlanner(Planner):
 
         ## important!!!
         ## normalize x and convert it to representation in agent initial frame
-        # trajs_norm = torch.clamp(x, min=-1, max=1) # [B, L, D]
         trajs_norm = x # [B, L, D]
         trajs_unorm = MecKinova.unnormalize_joints(trajs_norm) # [B, L, D]
         trajs_unorm = transform_trajectory_torch(
@@ -128,20 +121,6 @@ class MKMotionPolicyPlanner(Planner):
                 context = object_pc_o[None,...]
                 grasp_energy_model.set_latent(context, batch=args.batch)
                 grasp_energy_model.eval()
-
-                # ## sample grasping poses
-                # n_grasps = 10
-                # grasp_energy_model.set_latent(context, batch=n_grasps)
-                # generator = Grasp_AnnealedLD(grasp_energy_model, batch=n_grasps, T=70, T_fit=50, k_steps=2, device=args.device)
-                # H = generator.sample()
-                # H[..., :3, -1] *=1/8.
-                # # visualize results
-                # object_pc_o *=1/8
-                # grasp_visualization.visualize_grasps(
-                #     Hs=H.clone().detach().cpu().numpy(), 
-                #     p_cloud=object_pc_o.clone().detach().cpu().numpy()
-                # )
-                # exit()
 
                 # compute grasping pose energy
                 if self.grasp_energy_type == "last_frame":
@@ -255,13 +234,14 @@ class MKMotionPolicyPlanner(Planner):
         return (-1.0) * loss
     
     def gradient(self, x: torch.Tensor, data: Dict, variance: torch.Tensor) -> torch.Tensor:
-        """ Compute gradient for planner guidance
+        """ Compute gradient for planner guidance.
+
         Args:
-            x: the denosied signal at current step
-            data: data dict that provides original data
+            x [torch.Tensor]: the denosied signal at current step.
+            data [Dict]: data dict that provides original data.
 
         Return:
-            Commputed gradient
+            torch.Tensor. Commputed gradient.
         """
         with torch.enable_grad():
             x_in = x.detach().requires_grad_(True)
@@ -288,12 +268,20 @@ def marginal_prob_std(t, sigma=0.5):
     return np.sqrt((sigma ** (2 * t) - 1.) / (2. * np.log(sigma)))
 
 def compute_grasp_energy(model: torch.nn.Module, H: torch.Tensor, t: int=0, T: int=50, energy_lowerlimit: int=-150) -> torch.Tensor:
-    """
-    Arguements:
-        H {torch.Tensor} -- SE(3) transformation matrix
-        t {int} -- current denoising step
-        T {int} -- total denoising step
-        noise_off {bool} -- whether the denoising process is finished
+    """ This function computes the grasp energy and its associated loss for a given SE(3) transformation matrix using a provided model. 
+    It calculates the phase of the denoising process, computes the energy coefficient, and evaluates the energy and loss based on the model's output.
+
+    Args:
+        model [torch.nn.Module]: The neural network model used to predict energy values.
+        H [torch.Tensor]: SE(3) transformation matrix representing the pose(s).
+        t [int]: Current denoising step.
+        T [int]: Total number of denoising steps.
+        energy_lowerlimit [int]: The lower limit for the energy value.
+
+    Return:
+        Tuple[torch.Tensor, torch.Tensor]: 
+            - The predicted energy tensor from the model.
+            - The computed energy loss tensor.
     """
     # phase
     eps = 1e-3

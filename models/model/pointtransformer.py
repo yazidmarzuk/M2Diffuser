@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.nn as nn
-
 from models.model import pointops
 from loguru import logger
 
@@ -237,22 +236,3 @@ class PointTransformerEnc(nn.Module):
 def pointtransformer_enc_repro(**kwargs) -> PointTransformerEnc:
     model = PointTransformerEnc(PointTransformerBlock, [2, 3, 4, 6, 3], **kwargs)
     return model
-
-if __name__ == '__main__':
-    model_path = '/home/wangzan/Outputs/point_transformer.scannet/outputs/2022-04-13_18-29-56_POINTTRANS_C_32768/model.pth'
-    # m = pointtransformer_seg_repro(c=6, k=20).cuda()
-    # m.load_state_dict(torch.load(model_path))
-    m = pointtransformer_enc_repro(c=6)
-    m.load_pretrained_weight(model_path)
-    m = m.cuda()
-    
-    n = 8192
-    p = torch.rand(8 * n, 3).cuda()
-    x = torch.rand(8 * n, 3).cuda()
-    o = torch.IntTensor([n * 1, n * 2, n * 3, n * 4, n * 5, n * 6, n * 7, n * 8]).cuda()
-    
-    p5, x5, o5 = m((p, x, o))
-    print(p.shape)
-    print(p5.shape, x5.shape, o5.shape)
-    
-    

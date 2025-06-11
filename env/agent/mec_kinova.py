@@ -2,10 +2,10 @@ import os
 import torch
 import trimesh
 import numpy as np
-from typing import List, Optional, Union, Tuple
-from math import pi
 from yourdfpy import URDF, Link
 from utils.path import RootPath
+from typing import List, Optional, Union, Tuple
+from math import pi
 
 class MecKinova:
     """ MecKinova class for handling the Mec_kinova robot model.

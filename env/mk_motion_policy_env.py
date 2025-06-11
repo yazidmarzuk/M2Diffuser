@@ -1,6 +1,5 @@
 import copy
 import shutil
-import open3d as o3d
 import os
 import torch
 import numpy as np
@@ -25,7 +24,20 @@ from utils.transform import SE3, transform_pointcloud_numpy
 
 @ENV.register()
 class MKMotionPolicyEnv():
+    """ MKMotionPolicyEnv is an environment class for evaluating and visualizing motion policies for the MecKinova robotic agent.
+    It integrates simulation, evaluation, and visualization tools to support motion planning research and development.
+    """
     def __init__(self, cfg: DictConfig):
+        """ Initializes the environment with the given configuration. Sets up the evaluator, simulator, visualizer, 
+        result saving directory, agent, and agent sampler based on the provided configuration.
+
+        Args:
+            cfg [DictConfig]: Configuration object containing environment settings such as evaluation mode, 
+            visualization options, save directory, and other parameters.
+
+        Return:
+            None. Initializes class attributes based on the configuration.
+        """
         ## create evaluator and simulator
         if cfg.eval:
             self.eval = Evaluator(gui=cfg.sim_gui)
@@ -46,6 +58,16 @@ class MKMotionPolicyEnv():
         self.mk_sampler = MecKinovaSampler('cpu', num_fixed_points=1024, use_cache=True)
     
     def _init_viz(self):
+        """ Initializes the visualization environment for the robot. If a visualization object exists,
+        it loads the MK model's URDF, preloads the robot's meshes into Meshcat at a neutral position,
+        and sets their transforms for visualization.
+
+        Args:
+            self [object]: The instance of the class containing visualization and robot configuration attributes.
+
+        Return:
+            None: This function does not return any value. It sets up the visualization state as a side effect.
+        """
         if self.viz is not None:
             ## load the MK model
             self.agent_urdf = urchin.URDF.load(str(MecKinova.urdf_path))
@@ -58,6 +80,17 @@ class MKMotionPolicyEnv():
                 self.viz[f"robot/{idx}"].set_transform(v)
     
     def _visualize_pointcloud(self, pc_name: str, pc_points: np.ndarray, pc_colors: np.ndarray, pc_size: float=0.015):
+        """ Visualizes a point cloud in the MeshCat visualizer if available.
+
+        Args:
+            pc_name [str]: The name to assign to the point cloud object in the visualizer.
+            pc_points [np.ndarray]: An array of 3D points representing the point cloud (shape: [N, 3]).
+            pc_colors [np.ndarray]: An array of RGB color values for each point (shape: [N, 3]).
+            pc_size [float, optional]: The size of each point in the visualizer. Default is 0.015.
+
+        Return:
+            None: This function does not return a value. It updates the visualizer with the given point cloud.
+        """
         if self.viz is not None:
             self.viz[pc_name].set_object(
                 meshcat.geometry.PointCloud(
@@ -68,6 +101,17 @@ class MKMotionPolicyEnv():
             )
     
     def _visualize_mesh(self, m_name, m, color:Optional[str]=None):
+        """ Visualizes a mesh object in the MeshCat visualizer, optionally applying a specified color to the mesh vertices.
+
+        Args:
+            m_name [str]: The name identifier for the mesh object in the visualizer.
+            m [object]: The mesh object to be visualized, expected to have 'visual.vertex_colors', 'vertices', and 'faces' attributes.
+            color [Optional[str]]: The color to apply to the mesh vertices. Supported values are 'red', 'green', 'blue'. 
+            If None, uses the mesh's original vertex colors.
+
+        Return:
+            None. The function updates the visualization in the MeshCat visualizer.
+        """
         if m.visual.vertex_colors is not None:
             vertex_colors = np.asarray(m.visual.vertex_colors)[:, :3] / 255
             if color is not None:
@@ -87,19 +131,43 @@ class MKMotionPolicyEnv():
             self.viz[m_name].set_object(meshcat.geometry.TriangularMeshGeometry(m.vertices, m.faces))
     
     def _transform_pointcloud(self, pc_name: str, T: np.ndarray):
+        """ Transforms the specified point cloud by applying the given transformation matrix.
+        If a visualization object exists, updates the transformation of the point cloud in the visualization.
+
+        Args:
+            pc_name [str]: The name of the point cloud to be transformed.
+            T [np.ndarray]: The transformation matrix to be applied to the point cloud.
+
+        Return:
+            None. The function updates the visualization in place if applicable.
+        """
         if self.viz is not None:
             T = T.astype(np.float64)
             self.viz[pc_name].set_transform(T)
     
     def _transform_mesh(self, m_name: str, T: np.ndarray):
+        """ Applies a transformation matrix to the mesh specified by its name, updating its visualization if available.
+
+        Args:
+            m_name [str]: The name of the mesh to be transformed.
+            T [np.ndarray]: The transformation matrix to apply to the mesh.
+
+        Return:
+            None. The function updates the mesh transformation in the visualization if it exists.
+        """
         if self.viz is not None:
             T = T.astype(np.float64)
             self.viz[m_name].set_transform(T)
     
     def _create_new_group(self, key: str):
-        """
-        Creates a new metric group (for a new setting, for example)
-        :param key str: The key for this metric group
+        """ Creates and initializes a new metric group for evaluation, associated with the given key.
+        This is typically used to start tracking metrics for a new setting or experiment.
+
+        Args:
+            key [str]: The key identifying the new metric group to be created.
+
+        Return:
+            None. The function updates internal evaluation state by creating a new group if necessary and setting current pointers.
         """
         if self.eval:
             self.eval.current_result = {} # current trajectory evaluation result
@@ -109,13 +177,32 @@ class MKMotionPolicyEnv():
             self.eval.current_group = self.eval.groups[key]
     
     def print_overall_metrics(self):
+        """ This method calls the print_overall_metrics function of the eval attribute to display overall evaluation metrics.
+        """
         self.eval.print_overall_metrics()
     
-    def evaluate(self, id: int, dt: float, time: float, data: Dict[str, torch.Tensor],
-                    traj: Sequence[Union[Sequence, np.ndarray]], 
-                    agent_object: object=MecKinova, skip_metrics: bool=False
+    def evaluate(
+        self, id: int, dt: float, time: float, data: Dict[str, torch.Tensor],
+        traj: Sequence[Union[Sequence, np.ndarray]], 
+        agent_object: object=MecKinova, skip_metrics: bool=False
     ):
-        """ Evaluate the generated quality of the trajectory in the world frame
+        """ Evaluates the generated quality of a trajectory in the world frame for a given agent and task.
+        This function supports only batch size 1 and 2D trajectories. It transforms the agent's trajectory
+        to the world frame, computes evaluation metrics, and optionally saves the results. The evaluation
+        is performed in the agent's initial frame, as joint limits are defined in this frame.
+
+        Args:
+            id [int]: Identifier for the current evaluation instance.
+            dt [float]: Time step between trajectory points.
+            time [float]: Total duration of the trajectory.
+            data [Dict[str, torch.Tensor]]: Dictionary containing input data such as scene, task, transformation matrices, and initial agent position.
+            traj [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be evaluated, must be 2-dimensional.
+            agent_object [object]: The agent object used for evaluation (default: MecKinova).
+            skip_metrics [bool]: Whether to skip computation of evaluation metrics (default: False).
+
+        Return:
+            None. The function performs evaluation, prints metrics, and optionally saves results.
+        
         """
         B = data['x'].shape[0]
         assert B == 1, 'the evaluation mode supports only 1 batch size'
@@ -159,7 +246,17 @@ class MKMotionPolicyEnv():
             self.eval.print_group_metrics()
 
     def save_result(self, id: int, trajectory_w: np.ndarray, eval_result: Dict):
-        """ Save trajectory and evaluation result
+        """ Save the trajectory and evaluation result for a given ID. 
+        The function stores the trajectory and evaluation data into three different JSON files: 
+        one for the specific object, one for the current group, and one for all groups.
+
+        Args:
+            id [int]: The identifier for the trajectory and evaluation result.
+            trajectory_w [np.ndarray]: The trajectory data to be saved.
+            eval_result [Dict]: The evaluation result dictionary to be saved.
+
+        Return:
+            None. The function saves data to files and does not return a value.
         """
         item = eval_result
         item['trajectory_w'] = trajectory_w
@@ -173,7 +270,15 @@ class MKMotionPolicyEnv():
         dict2json(all_save_path, self.eval.groups)
     
     def visualize(self, data: Dict[str, torch.Tensor], traj: Sequence[Union[Sequence, np.ndarray]]):
-        """ Visualization in webpage using Meshcat
+        """ Visualizes trajectory and data using Meshcat in a webpage. The visualization type can be either point cloud or mesh, 
+        depending on the configuration.
+
+        Args:
+            data [Dict[str, torch.Tensor]]: A dictionary containing data to be visualized, where keys are strings and values are PyTorch tensors.
+            traj [Sequence[Union[Sequence, np.ndarray]]]: The trajectory to be visualized, represented as a sequence of sequences or numpy arrays.
+
+        Return:
+            None. The function performs visualization as a side effect.
         """
         if self.viz is not None:
             if self._viz_type == 'point_cloud':
@@ -184,7 +289,19 @@ class MKMotionPolicyEnv():
                 raise Exception('Unsupported visualization type')
 
     def visualize_point_cloud(self, data: Dict[str, torch.Tensor], traj: Sequence[Union[Sequence, np.ndarray]]):
-        """ Visualize point cloud and trajectory in webpage using Meshcat
+        """ Visualizes a point cloud and trajectory in a Meshcat-based web viewer. 
+        The function processes and transforms various point clouds (scene, agent, object, etc.) 
+        according to the current task and visualization frame, and animates the agent's motion 
+        along the provided trajectory.
+
+        Args:
+            data [Dict[str, torch.Tensor]]: 
+                A dictionary containing all necessary point cloud data, transformation matrices, 
+                and task-specific information required for visualization.
+            traj [Sequence[Union[Sequence, np.ndarray]]]: 
+                The agent's trajectory, represented as a 2D array or sequence of configurations.
+        Return:
+            None. This function performs visualization and does not return any value.
         """
         assert traj.ndim == 2, 'the trajectory of the visualization must be 2 dimension'
         task_name = data['task_name'][len(data['task_name']) - 1]
@@ -270,9 +387,6 @@ class MKMotionPolicyEnv():
                     self._visualize_pointcloud('target_pc_a', target_pc_a, target_pc_colors, 0.020)
                 if task_name == 'place':
                     self._visualize_pointcloud('placement_pc_a', placement_pc_a, placement_pc_colors, 0.050)
-                ## TODO
-                ## visualize scene placement point cloud
-                ## visualize target gripper point cloud
             
             ## visualize agent motion
             for _ in range(self._viz_time):
@@ -295,7 +409,17 @@ class MKMotionPolicyEnv():
                 time.sleep(0.2)
 
     def visualize_mesh(self, data: Dict[str, torch.Tensor], traj: Sequence[Union[Sequence, np.ndarray]]):
-        """ Visualize Mesh and trajectory in webpage using Meshcat
+        """ Visualizes a 3D mesh scene and trajectory using Meshcat, supporting both 'pick' and 'place' tasks. 
+        The function processes transformation matrices, updates object positions, and visualizes the scene, 
+        objects, and trajectories in either the world or agent's initial frame. It also animates the agent's 
+        motion and object transformations over the trajectory.
+
+        Args:
+            data [Dict[str, torch.Tensor]]: A dictionary containing scene, object, and agent information, 
+                including transformation matrices, task and object names, and point clouds.
+            traj [Sequence[Union[Sequence, np.ndarray]]]: The agent's trajectory, as a 2D sequence of configurations.
+        Return:
+            None. The function visualizes the scene and trajectory but does not return any value.
         """
         assert traj.ndim == 2, 'the trajectory of the visualization must be 2 dimension'
         task_name = data['task_name'][len(data['task_name']) - 1]
@@ -391,7 +515,18 @@ def scene_mesh_export(
     T_aw: Union[List, np.ndarray],
     T_ow: Union[List, np.ndarray],
 ) -> str:
-    """ Generate the mesh of the scene.
+    """ This function generates and exports the mesh of a scene for use in simulation environments such as PyBullet.
+    It updates the position of a specified object in the scene, applies necessary transformations, and exports
+    the resulting mesh to a file.
+
+    Args:
+        scene_name [str]: The name of the scene to be processed.
+        object_name [str]: The name of the object whose position will be updated in the scene.
+        T_aw [Union[List, np.ndarray]]: The transformation matrix from agent to world coordinates.
+        T_ow [Union[List, np.ndarray]]: The transformation matrix from object to world coordinates.
+
+    Return:
+        str: The file path to the exported scene mesh (OBJ file).
     """
     T_wa = np.linalg.inv(T_aw)
     scene = Scene(scene_name)

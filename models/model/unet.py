@@ -1,8 +1,7 @@
-from typing import Dict
-from einops import rearrange
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from typing import Dict
+from einops import rearrange
 from omegaconf import DictConfig
 from models.model.utils import timestep_embedding
 from models.model.utils import ResBlock, SpatialTransformer
@@ -14,17 +13,17 @@ class UNetModel(nn.Module):
     def __init__(self, cfg: DictConfig, slurm: bool, *args, **kwargs) -> None:
         super(UNetModel, self).__init__()
 
-        self.d_x = cfg.d_x # 79
-        self.d_model = cfg.d_model # 512 = 8 x 64
-        self.nblocks = cfg.nblocks # 4
-        self.resblock_dropout = cfg.resblock_dropout # 0.0
-        self.transformer_num_heads = cfg.transformer_num_heads # 8
-        self.transformer_dim_head = cfg.transformer_dim_head # 64
-        self.transformer_dropout = cfg.transformer_dropout # 0.1
-        self.transformer_depth = cfg.transformer_depth # 1
-        self.transformer_mult_ff = cfg.transformer_mult_ff # 2
-        self.context_dim = cfg.context_dim # 512
-        self.use_position_embedding = cfg.use_position_embedding # for input sequence x, True
+        self.d_x = cfg.d_x
+        self.d_model = cfg.d_model
+        self.nblocks = cfg.nblocks
+        self.resblock_dropout = cfg.resblock_dropout
+        self.transformer_num_heads = cfg.transformer_num_heads
+        self.transformer_dim_head = cfg.transformer_dim_head
+        self.transformer_dropout = cfg.transformer_dropout
+        self.transformer_depth = cfg.transformer_depth
+        self.transformer_mult_ff = cfg.transformer_mult_ff
+        self.context_dim = cfg.context_dim
+        self.use_position_embedding = cfg.use_position_embedding
 
         ## create scene model from config
         self.scene_model_name = cfg.scene_model.name # PointTransformer
@@ -43,7 +42,7 @@ class UNetModel(nn.Module):
             for p in self.scene_model.parameters():
                 p.requires_grad_(False)
 
-        time_embed_dim = self.d_model * cfg.time_embed_mult # 512 x 2
+        time_embed_dim = self.d_model * cfg.time_embed_mult
         self.time_embed = nn.Sequential(
             nn.Linear(self.d_model, time_embed_dim),
             nn.SiLU(),
@@ -51,7 +50,7 @@ class UNetModel(nn.Module):
         )
         
         self.in_layers = nn.Sequential(
-            nn.Conv1d(self.d_x, self.d_model, 1) # (79, 512, 1)
+            nn.Conv1d(self.d_x, self.d_model, 1)
         )
 
         self.layers = nn.ModuleList()
@@ -83,7 +82,7 @@ class UNetModel(nn.Module):
         )
         
     def forward(self, x_t: torch.Tensor, ts: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
-        """ Apply the model to an input batch
+        """ Apply the model to an input batch.
 
         Args:
             x_t: the input data, <B, C> or <B, L, C>
@@ -91,7 +90,7 @@ class UNetModel(nn.Module):
             cond: condition feature
         
         Return:
-            the denoised target data, i.e., $x_{t-1}$
+            the denoised target data, i.e., $x_{t-1}$.
         """
         in_shape = len(x_t.shape)
         if in_shape == 2:
@@ -103,8 +102,7 @@ class UNetModel(nn.Module):
         t_emb = self.time_embed(t_emb) 
         h = rearrange(x_t, 'b l c -> b c l') 
         
-        h = self.in_layers(h) # <B, d_model, L> [32, 512, 62]
-        # print(h.shape, cond.shape) # <B, d_model, L>, <B, T , c_dim>
+        h = self.in_layers(h) # <B, d_model, L>
 
         ## prepare position embedding for input x
         if self.use_position_embedding:
@@ -126,13 +124,13 @@ class UNetModel(nn.Module):
         return h
 
     def condition(self, data: Dict) -> torch.Tensor:
-        """ Obtain scene feature with scene model
+        """ Obtain scene feature with scene model.
 
         Args:
             data: dataloader-provided data
 
         Return:
-            Condition feature
+            Condition feature.
         """
         if self.scene_model_name == 'PointTransformer':
             b = data['offset'].shape[0]

@@ -8,13 +8,19 @@ from inspect import isfunction
 
 
 def timestep_embedding(timesteps, dim, max_period=10000, repeat_only=False):
-    """
-    Create sinusoidal timestep embeddings. 创建正弦时间步嵌入
-    :param timesteps: a 1-D Tensor of N indices, one per batch element.
-                      These may be fractional.
-    :param dim: the dimension of the output. 
-    :param max_period: controls the minimum frequency of the embeddings.
-    :return: an [N x dim] Tensor of positional embeddings.
+    """" This function generates sinusoidal timestep embeddings, commonly used in transformer models 
+    and diffusion models to encode temporal or positional information. The embeddings are created using 
+    sine and cosine functions of different frequencies, controlled by the max_period parameter. 
+    Optionally, the function can repeat the timesteps for embedding if repeat_only is set to True.
+
+    Args:
+        timesteps [torch.Tensor]: A 1-D tensor of shape [N], containing indices (can be fractional), one per batch element.
+        dim [int]: The dimension of the output embedding.
+        max_period [int, optional]: Controls the minimum frequency of the embeddings. Default is 10000.
+        repeat_only [bool, optional]: If True, simply repeats the timesteps to match the embedding dimension. Default is False.
+
+    Return:
+        embedding [torch.Tensor]: A tensor of shape [N, dim] containing the positional (timestep) embeddings.
     """
     if not repeat_only:
         half = dim // 2
@@ -30,28 +36,24 @@ def timestep_embedding(timesteps, dim, max_period=10000, repeat_only=False):
     return embedding
 
 class ResBlock(nn.Module):
-    """
-    A residual block that can optionally change the number of channels.
-    :param channels: the number of input channels.
-    :param emb_channels: the number of timestep embedding channels.
-    :param dropout: the rate of dropout.
-    :param out_channels: if specified, the number of out channels.
-    """
+    """ This class implements a residual block (ResBlock) for neural networks, which can optionally change the number of channels. 
+    It processes input features and adds a skip connection, allowing for conditioning on a timestep embedding.
 
-    """
-        ResBlock(
-        self.d_model,
-        time_embed_dim,
-        self.resblock_dropout,
-        self.d_model,
-    )
+    Args:
+        in_channels [int]: Number of input channels.
+        emb_channels [int]: Number of channels in the timestep embedding.
+        dropout [float]: Dropout rate applied after activation.
+        out_channels [int, optional]: Number of output channels. If not specified, defaults to in_channels.
+
+    Return:
+        torch.Tensor: Output tensor after applying the residual block, with shape [N x out_channels x ...].
     """
     def __init__(
         self,
-        in_channels, # 512
-        emb_channels, # 1024
-        dropout, # 0.0
-        out_channels=None, # 512
+        in_channels,
+        emb_channels,
+        dropout,
+        out_channels=None,
     ):
         super().__init__()
         self.in_channels = in_channels
@@ -78,24 +80,26 @@ class ResBlock(nn.Module):
         )
 
         if self.out_channels == self.in_channels:
-            self.skip_connection = nn.Identity() #* 恒等映射
+            self.skip_connection = nn.Identity()
         else:
             self.skip_connection = nn.Conv1d(self.in_channels, self.out_channels, 1)
 
     def forward(self, x, emb):
-        """
-        Apply the block to a Tensor, conditioned on a timestep embedding.
-        :param x: an [N x C x ...] Tensor of features.
-        :param emb: an [N x emb_channels] Tensor of timestep embeddings.
-        :return: an [N x C x ...] Tensor of outputs.
+        """ This function applies a neural network block to the input tensor `x`, conditioned on a timestep embedding `emb`. 
+        It processes the input through a series of layers, incorporates the embedding, and combines the result with a skip connection.
+
+        Args:
+            x [Tensor]: An input tensor of shape [N x C x ...], representing features.
+            emb [Tensor]: A tensor of shape [N x emb_channels], representing timestep embeddings.
+
+        Return:
+            Tensor: An output tensor of shape [N x C x ...], representing the processed features after applying the block and skip connection.
         """
         h = self.in_layers(x)
         emb_out = self.emb_layers(emb)
         h = h + emb_out.unsqueeze(-1)
         h = self.out_layers(h)
         return self.skip_connection(x) + h
-
-
 
 def exists(val):
     return val is not None
@@ -280,12 +284,9 @@ class BasicTransformerBlock(nn.Module):
         return x
 
 class SpatialTransformer(nn.Module):
-    """
-    Transformer block for sequential data.
-    First, project the input (aka embedding)
-    and reshape to b, t, d.
-    Then apply standard transformer action.
-    Finally, reshape to sequential data.
+    """ Transformer block for sequential data. First, project the input (aka embedding)
+    and reshape to b, t, d. Then apply standard transformer action. Finally, reshape to 
+    sequential data.
     """
     def __init__(self, in_channels, n_heads=8, d_head=64,
                  depth=1, dropout=0., context_dim=None, mult_ff=2):

@@ -1,33 +1,15 @@
-from argparse import Namespace
-import importlib
-import argparse
-import os
-import copy
-from typing import Dict
 import torch
+import copy
 import torch.nn.functional as F
-import numpy as np
+from typing import Dict
 from omegaconf import DictConfig
 from env.agent.mec_kinova import MecKinova
 from env.sampler.mk_sampler import MecKinovaSampler
-from env.scene.base_scene import Scene
-from eval.sparc import sparc
-from geometry.torch_cuboids import TorchCuboids
 from models.optimizer.optimizer import Optimizer
 from models.base import OPTIMIZER
-from third_party.grasp_diffusion.scripts.sample.generate_pointcloud_6d_grasp_poses import get_approximated_grasp_diffusion_field
-from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from third_party.grasp_diffusion.se3dif.samplers.grasp_samplers import Grasp_AnnealedLD
-from third_party.grasp_diffusion.se3dif.utils.torch_utils import to_numpy, to_torch
-from third_party.grasp_diffusion.se3dif.visualization import grasp_visualization
 from utils.meckinova_utils import transform_trajectory_torch
-from utils.open3d_utils import visualize_point_cloud
-from utils.pointcloud_utils import get_pointclouds_boundaries
-from theseus.geometry import SO3, SE3
-from utils.transform import SE3, transform_pointcloud_numpy, transform_pointcloud_torch
-import kaolin as kl
-from datetime import datetime
-from cprint import cprint 
+from utils.transform import transform_pointcloud_torch
+
 
 @OPTIMIZER.register()
 class MKMotionPolicyOptimizer(Optimizer):
@@ -60,13 +42,14 @@ class MKMotionPolicyOptimizer(Optimizer):
         self.sampler =  MecKinovaSampler(self.device, num_fixed_points=1024, use_cache=True)
     
     def optimize(self, x: torch.Tensor, data: Dict) -> torch.Tensor:
-        """ Compute gradient for optimizer constraint
+        """ Compute gradient for optimizer constraint.
+
         Args:
-            x: the denosied signal at current step, which is detached and is required grad
-            data: data dict that provides original data
+            x [torch.Tensor]: the denosied signal at current step, which is detached and is required grad.
+            data [Dict]: data dict that provides original data.
         
-        Return:
-            The optimizer objective value of current step
+        Return: 
+            torch.Tensor. The optimizer objective value of current step.
         """
         loss = 0
 
@@ -78,7 +61,6 @@ class MKMotionPolicyOptimizer(Optimizer):
 
         ## important!!!
         ## normalize x and convert it to representation in agent initial frame
-        # trajs_norm = torch.clamp(x, min=-1, max=1) # [B, L, D]
         trajs_norm = x # [B, L, D]
         trajs_unorm = MecKinova.unnormalize_joints(trajs_norm) # [B, L, D]
         trans_mats = data['trans_mat'] # [B, 4, 4]
@@ -118,12 +100,6 @@ class MKMotionPolicyOptimizer(Optimizer):
                     padding_mode='border', 
                     align_corners=False,
                 )
-                # # if there are no penetrating vertices then set sdf_penetration_loss = 0
-                # if agent_sdf_batch.lt(0).sum().item() < 1:
-                #     sdf_pene = torch.tensor(0.0, dtype=torch.float32, device=self.device)
-                # else:
-                #     sdf_pene = agent_sdf_batch[agent_sdf_batch < 0].abs().mean()
-                # collision_loss += sdf_pene
 
                 case1 = (agent_sdf_batch < 0).float()
                 result1 = -agent_sdf_batch + 0.5 * self.collision_margin
@@ -133,7 +109,6 @@ class MKMotionPolicyOptimizer(Optimizer):
                 result3 = torch.zeros_like(agent_sdf_batch)
                 collision_loss += (case1 * result1 + case2 * result2 + case3 * result3).mean()
                 
-            # print("coll_loss:", collision_loss)
             loss += self.collision_weight * collision_loss
 
         ## compute action limit loss
@@ -167,14 +142,15 @@ class MKMotionPolicyOptimizer(Optimizer):
         return (-1.0) * loss
 
     def gradient(self, x: torch.Tensor, data: Dict, variance: torch.Tensor) -> torch.Tensor:
-        """ Compute gradient for optimizer constraint
+        """ Compute gradient for optimizer constraint.
+
         Args:
-            x: the denosied signal at current step
-            data: data dict that provides original data
-            variance: variance at current step
+            x [torch.Tensor]: the denosied signal at current step
+            data [Dict]: data dict that provides original data
+            variance [torch.Tensor]: variance at current step
         
         Return:
-            Commputed gradient
+            torch.Tensor. Commputed gradient.
         """
         with torch.enable_grad():
             x_in = x.detach().requires_grad_(True)

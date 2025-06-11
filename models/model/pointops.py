@@ -1,7 +1,5 @@
 import torch
-import torch.nn as nn
 import pointops_cuda
-from typing import Tuple
 from torch.autograd import Function
 
 

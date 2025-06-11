@@ -11,7 +11,6 @@ def create_datamodule(cfg: dict, slurm: bool, **kwargs: Dict) -> pl.LightningDat
         cfg [dict]: Configuration object containing dataset settings.
         slurm [bool]: Indicates whether the code is running on a SLURM platform, used to specify the data path.
         **kwargs [Dict]: Additional keyword arguments for the datamodule.
-        pl.LightningDataModule: A LightningDataModule object that has loaded the designated dataset.
     
     Return:
         A Dataset object that has loaded the designated dataset.

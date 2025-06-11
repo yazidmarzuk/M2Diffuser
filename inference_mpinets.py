@@ -1,24 +1,21 @@
-from argparse import Namespace
 import copy
 import os
 import time
-from typing import Dict
 import hydra
 import torch
 import random
 import numpy as np
 import torch.nn as nn
 import kaolin as kl
+from typing import Dict
+from argparse import Namespace
 from omegaconf import DictConfig, OmegaConf
-from trimesh import transform_points
 from env.agent.mec_kinova import MecKinova
 from env.base import create_enviroment
 from env.sampler.mk_sampler import MecKinovaSampler
-from cprint import cprint
-from models.mpinets.mpinets_loss import point_clouds_match_loss
 from models.planner.mk_motion_policy_planning import compute_grasp_energy
 from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from utils.meckinova_utils import transform_configuration_torch, transform_trajectory_torch
+from utils.meckinova_utils import transform_configuration_torch
 from utils.misc import compute_model_dim
 from datamodule.base import create_datamodule
 from models.base import create_model
@@ -33,20 +30,25 @@ def rollout_mpinets(
     num_pc_item: Dict[str, int],
     max_rollout_length: int=60,
 ) -> np.ndarray:
-    """
-    Rolls out the policy until the success criteria are met.
+    """ Rolls out the policy using the provided model and data for a specified maximum number of steps, 
+    updating the robot configuration and point cloud at each step. Depending on the task type ('pick', 
+    'place', or 'goal-reach'), it computes the trajectory and searches for the step with the minimum 
+    energy (grasping, placement, or goal-reaching energy).
 
-    :param mdl MotionGenerationNetwork: The policy
-    :param q0 torch.Tensor: The starting configuration (dimension [10])
-    :param target SE3: The target in the `right_gripper` frame
-    :param point_cloud torch.Tensor: The point cloud to be fed into the model. Should have
-                                     dimensions [1 x NUM_AGENT_POINTS + NUM_SCENE_POINTS + NUM_OBJECT_POINTS x 4]
-                                     and consist of the constituent points stacked in
-                                     this order (robot, obstacle, target).
-    :param fk_sampler FrankaSampler: A sampler that produces points on the robot's surface
-    :rtype np.ndarray: The trajectory
+    Args:
+        mdl [nn.Module]: The motion generation network (policy) to be used for predicting the next configuration.
+        data [Dict[str, torch.Tensor]]: Input data containing point clouds, transformation matrices, configurations, 
+            and other task-specific information.
+        mk_sampler [MecKinovaSampler]: A sampler for generating points on the robot's surface and computing end-effector poses.
+        num_pc_item [Dict[str, int]]: Dictionary specifying the number of agent, scene, object, placement area, and target 
+            points in the point cloud.
+        max_rollout_length [int, optional]: The maximum number of rollout steps to perform. Default is 60.
+    
+    Return:
+        np.ndarray: The trajectory of robot configurations over the rollout, with shape [B, L, D], where B is batch size, L is rollout 
+            length, and D is configuration dimension.
+        np.ndarray: The indices of the steps with the minimum energy (grasping, placement, or goal-reaching), depending on the task type.
     """
-
     B, L = data['xyz'].shape[0], max_rollout_length
     device = data['xyz'].device
     task_type = data['task_name'][0]

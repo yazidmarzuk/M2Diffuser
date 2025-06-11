@@ -2,29 +2,22 @@ import os
 import random
 import hydra
 import torch
+import uuid
+import sys
+import os
 import numpy as np
-from torch.utils.tensorboard import SummaryWriter
-from omegaconf import DictConfig, OmegaConf
-from loguru import logger
-from termcolor import colored
 import pytorch_lightning as pl
+from omegaconf import DictConfig, OmegaConf
+from termcolor import colored
 from pytorch_lightning.loggers import WandbLogger
 from typing import Optional, Any, Dict, List, Union
 from pathlib import Path
-import sys
-import os
 from datetime import timedelta
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback
-import argparse
-import torch
-import yaml
-import uuid
 from datamodule.base import create_datamodule
 from models.base import create_model
-from models.model.unet import UNetModel
 from utils.misc import compute_model_dim, timestamp_str
-from cprint import cprint
 
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -42,20 +35,19 @@ def setup_trainer(
     training_epoch: int,
     checkpoint_dir: Optional[str]=None,
 ) -> pl.Trainer:
-    """
-    Creates the Pytorch Lightning trainer object.
+    """ Creates the Pytorch Lightning trainer object.
 
-    Arguments:
-        gpus {Union[int, List[int]]} -- The number of GPUs (if more than 1, uses DDP)
-        test {bool} -- Whether to use a test dataset
-        save_checkpoint {bool} -- Whether to save checkpoints
-        logger {Optional[WandbLogger]} -- The logger object, set to None if logging is disabled
-        checkpoint_interval {int} -- The number of minutes between checkpoints
-        checkpoint_dir {str} -- The directory in which to save checkpoints (a subdirectory will be created according to the experiment ID)
-        validation_interval {float} -- How often to run the validation step, either as a proportion of the training epoch or as a number of batches
+    Argus:
+        gpus[Union[int, List[int]]]: The number of GPUs (if more than 1, uses DDP).
+        test [bool]: Whether to use a test dataset.
+        save_checkpoint [bool]: Whether to save checkpoints.
+        logger [Optional[WandbLogger]]: The logger object, set to None if logging is disabled.
+        checkpoint_interval [int]: The number of minutes between checkpoints.
+        checkpoint_dir [str]: The directory in which to save checkpoints (a subdirectory will be created according to the experiment ID).
+        validation_interval [float]: How often to run the validation step, either as a proportion of the training epoch or as a number of batches.
     
     Returns:
-        pl.Trainer -- The trainer object
+        pl.Trainer. The trainer object.
     """
     args: Dict[str, Any] = {}
 
@@ -112,8 +104,7 @@ def setup_trainer(
 
 
 def setup_logger(is_log: bool, experiment_name: str, project_name: str, config_values: Dict[str, Any]) -> Optional[WandbLogger]:
-    """
-    Setup the logger, log the data during the experiment.
+    """ Setup the logger, log the data during the experiment.
     """
     if not is_log:
         pl.utilities.rank_zero_info("Disabling all logs")

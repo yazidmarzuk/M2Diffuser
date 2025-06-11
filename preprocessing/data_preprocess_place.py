@@ -1,42 +1,29 @@
 import copy
 import json
 import os
-import time
 import argparse
 import random
 import sys
 import numpy as np
-from cprint import cprint
 import torch
 import math
-from tqdm import tqdm
-from typing import Dict, List, Optional
 import trimesh
-import open3d as o3d
 import trimesh.creation
-from trimesh import transform_points
 import trimesh.sample
+from tqdm import tqdm
+from typing import List
+from cprint import cprint
+from trimesh import transform_points
 sys.path.append("..")
 from env.sampler.mk_sampler import MecKinovaSampler
 from preprocessing.data_utils import check_file, compute_data_number, compute_scene_sdf
 from env.agent.mec_kinova import MecKinova
 from utils.meckinova_utils import transform_trajectory_numpy
-from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from third_party.grasp_diffusion.se3dif.samplers.grasp_samplers import Grasp_AnnealedLD
-from third_party.grasp_diffusion.se3dif.visualization import grasp_visualization
 from env.scene.base_scene import Scene
-from utils.open3d_utils import visualize_point_cloud
-from utils.transform import SE3, EulerAnglesXYZ2TransformationMatrix, transform_pointcloud_numpy, transform_pointcloud_torch
 from utils.io import mkdir_if_not_exists, rmdir_if_exists
-from utils.transform import QuaternionXYZ2TransformationMatrix
+from utils.transform import SE3
 
-"""
-python data_preprocess_place.py --robot MecKinova --task place --origin_path /home/robot-learning/0_WorkSpace/9_MGeNets/place_data/dataset_place_0_cm --save_path ../data --overwrite
 
-# ablation
-python data_preprocess_place.py --robot MecKinova --task place --origin_path /home/robot-learning/0_WorkSpace/9_MGeNets/ablation_data/place --save_path ../abl_data --overwrite
-
-"""
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument('--robot', type=str, default='MecKinova', help='robot name, such as MecKinova or Franka')
@@ -50,13 +37,12 @@ def parse_args():
     return opt
 
 def preprocess_data(data_path:str, save_path:str, id:int, mk_agent:MecKinova, mk_sampler:MecKinovaSampler) -> None:
-    """
-    The data collected by VKC is preprocessed into the format used by the network.
+    """ The data collected by VKC is preprocessed into the format used by the network.
 
-    Arguements:
-        data_path {str} -- Data path to be processed.
-        save_path {str} -- Saving path of preprocessed data.
-        id {int} -- Starting from 0, the number of the saved data.
+    Args:
+        data_path [str]: Data path to be processed.
+        save_path [str]: Saving path of preprocessed data.
+        id [int]: Starting from 0, the number of the saved data.
     ------------------------------------------------------------------------------
     Saved information: (There is currently a bug in the code for getting colors》)
     {

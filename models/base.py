@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional
 import torch.nn as nn
+from typing import Dict, List, Optional
 from omegaconf import DictConfig
 from utils.registry import Registry
 from models.optimizer.optimizer import Optimizer
@@ -17,10 +17,10 @@ def create_model(cfg: DictConfig, ckpt_path: Optional[str]=None, *args: List, **
     Otherwise, this function will create other generative models, e.g., cvae.
 
     Args:
-        cfg: configuration object, the global configuration
+        cfg: configuration object, the global configuration.
     
     Return:
-        A generative model
+        A generative model.
     """
     if 'diffuser' in cfg:
         return create_diffuser(cfg, ckpt_path, *args, **kwargs)
@@ -32,14 +32,14 @@ def create_model(cfg: DictConfig, ckpt_path: Optional[str]=None, *args: List, **
     return MODEL.get(cfg.model.name)(cfg.model, *args, **kwargs)
 
 def create_diffuser(cfg: DictConfig, ckpt_path: Optional[str]=None, *args: List, **kwargs: Dict) -> nn.Module:
-    """ Create a diffuser model, first create a eps_model from model config,
-    then create a diffusion model and use the eps_model as input.
+    """ Create a diffuser model, first create a eps_model from model config, then create a diffusion model 
+    and use the eps_model as input.
 
     Args:
-        cfg: configuration object
+        cfg: configuration object.
     
     Return:
-        A diffusion model
+        A diffusion model.
     """
     ## use diffusion model, the model is a eps model
     eps_model = MODEL.get(cfg.model.name)(cfg.model, *args, **kwargs)
@@ -72,13 +72,13 @@ def create_diffuser(cfg: DictConfig, ckpt_path: Optional[str]=None, *args: List,
     return diffuser
 
 def create_optimizer(cfg: DictConfig, *args: List, **kwargs: Dict) -> Optimizer:
-    """ Create a optimizer for constrained sampling
+    """ Create a optimizer for constrained sampling.
 
     Args:
-        cfg: configuration object
+        cfg: configuration object.
     
     Return:
-        A optimizer used for guided sampling
+        A optimizer used for guided sampling.
     """
     if cfg is None:
         return None
@@ -86,13 +86,13 @@ def create_optimizer(cfg: DictConfig, *args: List, **kwargs: Dict) -> Optimizer:
     return OPTIMIZER.get(cfg.name)(cfg, *args, **kwargs)
 
 def create_planner(cfg: DictConfig, *args: List, **kwargs: Dict) -> Planner:
-    """ Create a planner for constrained sampling
+    """ Create a planner for constrained sampling.
 
     Args:
-        cfg: configuration object
+        cfg: configuration object.
         
     Return:
-        A planner used for guided sampling
+        A planner used for guided sampling.
     """
     if cfg is None:
         return None

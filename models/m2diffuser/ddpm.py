@@ -1,10 +1,9 @@
-from typing import Dict, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from omegaconf import DictConfig
-from cprint import cprint
 import pytorch_lightning as pl
+from typing import Dict, Tuple
+from omegaconf import DictConfig
 from models.base import DIFFUSER
 from models.m2diffuser.schedule import make_schedule_ddpm
 from models.optimizer.optimizer import Optimizer
@@ -15,10 +14,10 @@ class DDPM(pl.LightningModule):
     def __init__(self, eps_model: nn.Module, cfg: DictConfig, has_obser: bool, *args, **kwargs) -> None:
         super(DDPM, self).__init__()
         
-        self.eps_model = eps_model # UNet
-        self.timesteps = cfg.timesteps # 200
-        self.schedule_cfg = cfg.schedule_cfg # {'beta': [0.0001, 0.01], 'beta_schedule': 'linear', 's': 0.008}
-        self.rand_t_type = cfg.rand_t_type # 'half'
+        self.eps_model = eps_model
+        self.timesteps = cfg.timesteps
+        self.schedule_cfg = cfg.schedule_cfg
+        self.rand_t_type = cfg.rand_t_type
         self.converage_opt = cfg.sample.converage.optimization
         self.converage_plan = cfg.sample.converage.planning
         self.converage_ksteps = cfg.sample.converage.ksteps
@@ -27,7 +26,7 @@ class DDPM(pl.LightningModule):
         self.fine_tune_timesteps = cfg.sample.fine_tune.timesteps
         self.fine_tune_ksteps = cfg.sample.fine_tune.ksteps
         self.lr = cfg.lr
-        self.has_observation = has_obser # used in some task giving observation
+        self.has_observation = has_obser
         self.train_dataloader_len = None
 
         for k, v in make_schedule_ddpm(self.timesteps, **self.schedule_cfg).items():
@@ -48,7 +47,7 @@ class DDPM(pl.LightningModule):
         return self.betas.device
     
     def apply_observation(self, x_t: torch.Tensor, data: Dict) -> torch.Tensor:
-        """ Apply observation to x_t, if self.has_observation if False, this method will return the input
+        """ Apply observation to x_t, if self.has_observation if False, this method will return the input.
 
         Args:
             x_t: noisy x in step t
@@ -88,7 +87,7 @@ class DDPM(pl.LightningModule):
         return x_t
 
     def forward(self, data: Dict) -> torch.Tensor:
-        """ Reverse diffusion process, sampling with the given data containing condition
+        """ Reverse diffusion process, sampling with the given data containing condition.
 
         Args:
             data: test data, data['x'] gives the target data, data['y'] gives the condition
@@ -100,12 +99,6 @@ class DDPM(pl.LightningModule):
 
         ## randomly sample timesteps
         if self.rand_t_type == 'all':
-            """
-            torch.randint:
-                low (int, optional) - Lowest integer to be drawn from the distribution. Default: 0.
-                high (int) - One above the highest integer to be drawn from the distribution.
-                size (tuple) - a tuple defining the shape of the output tensor.
-            """
             ts = torch.randint(0, self.timesteps, (B, ), device=self.device).long()
         elif self.rand_t_type == 'half': # √
             ts = torch.randint(0, self.timesteps, ((B + 1) // 2, ), device=self.device)
@@ -148,7 +141,7 @@ class DDPM(pl.LightningModule):
         return {'loss': loss}
     
     def model_predict(self, x_t: torch.Tensor, t: torch.Tensor, cond: torch.Tensor) -> Tuple:
-        """ Get and process model prediction
+        """ Get and process model prediction.
 
         $x_0 = \frac{1}{\sqrt{\bar{\alpha}_t}}(x_t - \sqrt{1 - \bar{\alpha}_t}\epsilon_t)$
 
@@ -197,7 +190,7 @@ class DDPM(pl.LightningModule):
 
     @torch.no_grad()
     def p_sample(self, x_t: torch.Tensor, t: int, data: Dict, opt: bool=False, plan: bool=False) -> torch.Tensor:
-        """ One step of reverse diffusion process
+        """ One step of reverse diffusion process.
 
         $x_{t-1} = \tilde{\mu} + \sqrt{\tilde{\beta}} * z$
 
@@ -239,7 +232,7 @@ class DDPM(pl.LightningModule):
     
     @torch.no_grad()
     def p_sample_loop(self, data: Dict) -> torch.Tensor:
-        """ Reverse diffusion process loop, iteratively sampling
+        """ Reverse diffusion process loop, iteratively sampling.
 
         Args:
             data: test data, data['x'] gives the target data shape
@@ -257,7 +250,7 @@ class DDPM(pl.LightningModule):
         all_x_t = [x_t]
 
         ## converage results
-        cprint.info('------------ converage ------------')
+        # cprint.info('------------ converage ------------')
         for t in reversed(range(0, self.timesteps)):
             for _ in range(self.converage_ksteps):
                 x_t = self.p_sample(x_t, t, data, self.converage_opt, self.converage_plan)
@@ -265,7 +258,7 @@ class DDPM(pl.LightningModule):
                 x_t = self.apply_observation(x_t, data)
                 all_x_t.append(x_t)
         ## fine-tuning results
-        cprint.info('------------ fine-tune ------------')
+        # cprint.info('------------ fine-tune ------------')
         for t in reversed(range(0, self.fine_tune_timesteps)):
             for _ in range(self.fine_tune_ksteps):
                 x_t = self.p_sample(x_t, 0, data, self.fine_tune_opt, self.fine_tune_plan)
@@ -314,7 +307,7 @@ class DDPM(pl.LightningModule):
         return ksamples
     
     def set_optimizer(self, optimizer: Optimizer):
-        """ Set optimizer for diffuser, the optimizer is used in sampling
+        """ Set optimizer for diffuser, the optimizer is used in sampling.
 
         Args:
             optimizer: a Optimizer object that has a gradient method
@@ -322,7 +315,7 @@ class DDPM(pl.LightningModule):
         self.optimizer = optimizer
     
     def set_planner(self, planner: Planner):
-        """ Set planner for diffuser, the planner is used in sampling
+        """ Set planner for diffuser, the planner is used in sampling.
 
         Args:
             planner: a Planner object that has a gradient method
@@ -331,8 +324,7 @@ class DDPM(pl.LightningModule):
     
     ## only called by the trainer during the training process
     def configure_optimizers(self):
-        """
-        A standard method in PyTorch lightning to set the optimizer
+        """ A standard method in PyTorch lightning to set the optimizer.
         """
         params = []
         nparams = []
@@ -352,8 +344,7 @@ class DDPM(pl.LightningModule):
     def training_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        A function called automatically by Pytorch Lightning during training. This 
+        """ A function called automatically by Pytorch Lightning during training. This 
         function handles the forward pass, the loss calculation, and what to log.
         """
         loss = self(batch)["loss"]
@@ -363,8 +354,7 @@ class DDPM(pl.LightningModule):
     def validation_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        This is a Pytorch Lightning function run automatically across devices
-        during the validation loop
+        """ This is a Pytorch Lightning function run automatically across devices
+        during the validation loop.
         """
         pass

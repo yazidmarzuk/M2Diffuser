@@ -1,6 +1,4 @@
 import torch.nn as nn
-from omegaconf import DictConfig
-
 from utils.registry import Registry
 from models.model.pointtransformer import pointtransformer_enc_repro
 from models.model.pointnet import pointnet_enc_repro

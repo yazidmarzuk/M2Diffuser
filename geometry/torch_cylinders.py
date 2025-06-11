@@ -1,3 +1,6 @@
+# Note: original code can be found on Github at
+# https://github.com/NVlabs/motion-policy-networks/blob/main/mpinets/geometry.py
+
 import torch
 from geometrout.primitive import Cylinder
 

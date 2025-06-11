@@ -3,35 +3,18 @@ import sys
 import copy
 import json
 import os
-import time
 import argparse
 import random
 import sys
 import numpy as np
-from cprint import cprint
 import torch
-import math
 from tqdm import tqdm
-from typing import Any, Dict, List, Optional, Sequence
-import trimesh
-import open3d as o3d
-import trimesh.creation
-from trimesh import transform_points
-import trimesh.sample
-from natsort import ns, natsorted
-import theseus as th
-import gc
-
+from typing import Any, Dict, Sequence
 sys.path.append("../")
-from env.scene.base_scene import Scene
 from env.agent.mec_kinova import MecKinova
-from utils.io import dict2json, mkdir_if_not_exists
+from utils.io import dict2json
 from utils.transform import SE3
-from third_party.grasp_diffusion.se3dif.utils.geometry_utils import SO3_R3
-from env.sampler.mk_sampler import MecKinovaSampler
-from third_party.grasp_diffusion.se3dif.visualization import grasp_visualization
-from third_party.grasp_diffusion.se3dif.models.loader import load_model
-from third_party.grasp_diffusion.se3dif.samplers.grasp_samplers import Grasp_AnnealedLD
+
 
 # they can be gripped
 SKIP_OBJ_NAME = {
@@ -51,24 +34,12 @@ def parse_args():
     return opt
 
 def percent_true(arr: Sequence) -> float:
-    """
-    Returns the percent true of a boolean sequence or the percent nonzero of a numerical sequence
-
-    :param arr Sequence: The input sequence
-    :rtype float: The percent
-    """
     return 100 * np.count_nonzero(arr) / len(arr)
 
 def add_metric(group, key, value):
     group[key] = group.get(key, []) + [value]
 
 def eval_metrics(group: Dict[str, Any]) -> Dict[str, float]:
-    """
-    Calculates the metrics for a specific group
-
-    :param group Dict[str, Any]: The group of results
-    :rtype Dict[str, float]: The metrics
-    """
     # There was a problem with the previous code, so let's rework it here
     group["physical_violations"] = (
         group["collision"] 

@@ -17,8 +17,7 @@ from transformers.optimization import get_cosine_schedule_with_warmup
 
 @MODEL.register()
 class MotionPolicyTransformer(pl.LightningModule):
-    """
-    This model uses GPT to model (q_1, o_1, q_2, o_2, ...)
+    """ This model uses GPT to model (q_1, o_1, q_2, o_2, ...)
     """
     def __init__(self, cfg: DictConfig, *args, **kwargs):
         """
@@ -98,8 +97,7 @@ class MotionPolicyTransformer(pl.LightningModule):
         )
 
     def configure_optimizers(self):
-        """
-        A standard method in PyTorch lightning to set the optimizer
+        """ A standard method in PyTorch lightning to set the optimizer
         """
         optimizer = torch.optim.AdamW(
             self.parameters(),
@@ -117,10 +115,12 @@ class MotionPolicyTransformer(pl.LightningModule):
         )
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
 
-    def forward(self, obsers: torch.Tensor, cfgs: torch.Tensor, timesteps: torch.Tensor, 
-                attention_mask: Optional[torch.Tensor]=None) -> torch.Tensor:  # type: ignore[override]
-        """
-        Passes data through the network to produce an output.
+    def forward(
+            self, obsers: torch.Tensor, cfgs: torch.Tensor, 
+            timesteps: torch.Tensor, 
+            attention_mask: Optional[torch.Tensor]=None
+        ) -> torch.Tensor:  # type: ignore[override]
+        """ Passes data through the network to produce an output.
         """
         B, C, N = obsers.shape[0], obsers.shape[1], obsers.shape[2] # [batch_size, context_length, points_num]
 
@@ -153,11 +153,13 @@ class MotionPolicyTransformer(pl.LightningModule):
         return self.predict_cfg(x)
 
     def sample(self, q: torch.Tensor) -> torch.Tensor:
-        """
-        Samples a point cloud from the surface of all the robot's links
+        """ Samples a point cloud from the surface of all the robot's links.
+        
+        Args:
+            q [torch.Tensor]: Batched configuration in joint space.
 
-        :param q torch.Tensor: Batched configuration in joint space
-        :rtype torch.Tensor: Batched point cloud of size [B, self.num_robot_points, 3]
+        Return:
+            torch.Tensor: Batched point cloud of size [B, self.num_robot_points, 3], sampled from the surface of all the robot's links.
         """
         assert self.mk_sampler is not None
         return self.mk_sampler.sample(q)
@@ -165,16 +167,23 @@ class MotionPolicyTransformer(pl.LightningModule):
     def training_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        A function called automatically by Pytorch Lightning during training. This 
-        function handles the forward pass, the loss calculation, and what to log.
+        """ This function is automatically called by PyTorch Lightning during training. 
+        It performs the forward pass, computes various losses (such as collision loss 
+        and point match loss), applies necessary transformations to the model outputs 
+        and ground truth, and logs relevant metrics. The final weighted loss is returned 
+        for backpropagation.
 
-        Arguements:
-            batch {Dict[str, torch.Tensor]} -- A data batch coming from the data loader, 
-                                               should already be on the correct device
-            batch_idx {int} -- The index of the batch (not used by this function)
-        Returns:
-            torch.Tensor -- The overall weighted loss (used for backprop)
+        Args:
+            batch [Dict[str, torch.Tensor]]: 
+                A batch of data from the data loader, containing input features, ground truth, 
+                transformation matrices, SDF values, and other necessary information. All tensors 
+                are expected to be on the correct device.
+            batch_idx [int]: 
+                The index of the current batch (not used in this function).
+
+        Return:
+            torch.Tensor: 
+                The overall weighted loss computed from the batch, used for backpropagation.
         """
         if self.mk_sampler is None:
             self.mk_sampler = MecKinovaSampler(self.device, self.num_agent_points, use_cache=True)
@@ -260,8 +269,7 @@ class MotionPolicyTransformer(pl.LightningModule):
     def validation_step(  # type: ignore[override]
         self, batch: Dict[str, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
-        """
-        This is a Pytorch Lightning function run automatically across devices
-        during the validation loop
+        """ This is a Pytorch Lightning function run automatically across devices
+        during the validation loop.
         """
         pass

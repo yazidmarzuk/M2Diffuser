@@ -5,7 +5,6 @@ import torch
 import random
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
-from trimesh import transform_points
 from env.agent.mec_kinova import MecKinova
 from env.base import create_enviroment
 from utils.meckinova_utils import transform_trajectory_torch

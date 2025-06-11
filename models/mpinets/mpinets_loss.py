@@ -2,36 +2,38 @@ import torch
 import torch.nn.functional as F
 
 def point_clouds_match_loss(input_pc: torch.Tensor, target_pc: torch.Tensor, reduction: str="mean") -> torch.Tensor:
-    """
-    A combination L1 and L2 loss to penalize large and small deviations between
-    two point clouds
+    """ This function computes a combined L1 and L2 loss between two point clouds,
+    penalizing both large and small deviations. It is typically used to measure
+    the similarity between a predicted point cloud and a target (ground truth)
+    point cloud in tasks such as 3D reconstruction or generation.
 
-    :param input_pc torch.Tensor: Point cloud sampled from the network's output.
-                                  Has dim [B, N, 3]
-    :param target_pc torch.Tensor: Point cloud sampled from the supervision
-                                   Has dim [B, N, 3]
-    :rtype torch.Tensor: The single loss value
+    Args:
+        input_pc [torch.Tensor]: The predicted point cloud from the network, with shape [B, N, 3].
+        target_pc [torch.Tensor]: The ground truth point cloud for supervision, with shape [B, N, 3].
+        reduction [str]: Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'. Default is 'mean'.
+
+    Return:
+        torch.Tensor: The computed loss value representing the similarity between the input and target point clouds.
     """
     return F.mse_loss(input_pc, target_pc, reduction=reduction) + \
             F.l1_loss(input_pc, target_pc, reduction=reduction)
 
 def sdf_collision_loss(
-    agent_pcs: torch.Tensor, 
+    agent_pcs: torch.Tensor,
     sdf_norm_values: torch.Tensor,
 ) -> torch.Tensor:
-    """
-    Calculating whether the robot (represented as a point cloud) is in collision 
-    with any obstacles in the scene. 
-    NOTE: Since our data is not collected in a structured environment like mpinets, 
-    our method of calculating collision loss is different from mpinets, but our 
-    method is still effective.
+    """ Calculates the collision loss for a robot represented as a point cloud by evaluating the signed 
+    distance function (SDF) values at the agent's points. If any agent points penetrate obstacles (i.e., 
+    have negative SDF values), the mean absolute penetration is used as the loss; otherwise, the loss is zero.
 
-    Arguements:
-        agent_pcs {torch.Tensor} -- The normalized point clouds for agent in the world frame.
-        sdf_norm_values {torch.Tensor} -- The normalized scene SDF value in world frame, ranging in [-1, 1], 
-                                        dimension like [B, grid_resolution, grid_resolution, grid_resolution].
-    Returns:
-        torch.Tensor -- Returns a collision loss using in model training.
+    Args:
+        agent_pcs [torch.Tensor]: The normalized point clouds for the agent in the world frame, with shape [B, N, 3].
+        sdf_norm_values [torch.Tensor]: The normalized scene SDF values in the world frame, ranging in [-1, 1], 
+            with shape [B, grid_resolution, grid_resolution, grid_resolution].
+
+    Return:
+        torch.Tensor: The computed collision loss, representing the mean absolute penetration of agent points into 
+            obstacles, used for model training. 
     """
     agent_points_num = agent_pcs.shape[1]
     agent_sdf_batch = F.grid_sample(
