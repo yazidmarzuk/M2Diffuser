@@ -1,23 +1,15 @@
-import time
-from pathlib import Path
-from typing import List
-import numpy as np
 import pybullet as p
+import numpy as np
+from typing import List
 from geometrout.primitive import Cuboid, Sphere, Cylinder
 from geometrout.transform import SE3
 from pyquaternion import Quaternion
-import math
 from cprint import *
-from urchin import URDF
 from env.agent.mec_kinova import MecKinova
 from utils.transform import transform_pointcloud_torch
 
 class Bullet:
     def __init__(self, gui=False):
-        """
-        :param gui: Whether to use a gui to visualize the environment.
-            Only one gui instance allowed
-        """
         self.use_gui = gui
         if self.use_gui:
             self.clid = p.connect(p.GUI)
@@ -27,8 +19,7 @@ class Bullet:
         self.obstacle_ids = []
 
     def __del__(self):
-        """
-        Disconnects the client on destruction
+        """ Disconnects the client on destruction
         """
         p.disconnect(self.clid)
 
@@ -139,8 +130,7 @@ class Bullet:
         return pc
 
     def load_robot(self, robot_type, **kwargs):
-        """
-        Generic function to load a robot.
+        """ Generic function to load a robot.
         """
         if robot_type == MecKinova:
             robot = BulletMecKinova(self.clid, **kwargs)
@@ -302,18 +292,23 @@ class Bullet:
         return obstacle_id
 
     def clear_obstacle(self, id):
-        """
-        Removes a specific obstacle from the environment
+        """ Removes a specific obstacle from the simulation environment using its Bullet physics engine ID. 
+        Updates the internal list of obstacle IDs to reflect the removal.
 
-        :param id: Bullet id of obstacle to remove
+        Args:
+            id [int or None]: Bullet physics engine ID of the obstacle to remove. If None, no action is taken.
+
+        Return:
+            None. The function performs the removal as a side effect.
+        
         """
         if id is not None:
             p.removeBody(id, physicsClientId=self.clid)
             self.obstacle_ids = [x for x in self.obstacle_ids if x != id]
 
     def clear_all_obstacles(self):
-        """
-        Removes all obstacles from bullet environment
+        """ Removes all obstacles from the Bullet physics environment by iterating through the list of obstacle 
+        IDs and removing each one from the simulation.
         """
         for id in self.obstacle_ids:
             if id is not None:
@@ -323,10 +318,6 @@ class Bullet:
 
 class BulletController(Bullet):
     def __init__(self, gui=False, hz=12, substeps=20):
-        """
-        :param gui: Whether to use a gui to visualize the environment.
-                    Only one gui instance allowed
-        """
         super().__init__(gui)
         p.setPhysicsEngineParameter(
             fixedTimeStep=1 / hz,
@@ -359,28 +350,27 @@ class BulletRobot:
     @property
     def links(self):
         """
-        :return: The names and bullet ids of all links for the loaded robot
+        Return: The names and bullet ids of all links for the loaded robot.
         """
         return [(k, v) for k, v in self._link_name_to_index.items()]
 
     def link_id(self, name):
         """
-        :return: The bullet id corresponding to a specific link name
+        Return: The bullet id corresponding to a specific link name.
         """
         return self._link_name_to_index[name]
 
     def link_name(self, id):
         """
-        :return: The name corresponding to a particular bullet id
+        Return: The name corresponding to a particular bullet id.
         """
         return self._index_to_link_name[id]
 
     @property
     def link_frames(self):
         """
-        :return: A dictionary where the link names are the keys
-            and the values are the correponding poses as reflected
-            by the current state of the environment
+        Return: A dictionary where the link names are the keys and the values are the 
+        correponding poses as reflectedby the current state of the environment.
         """
         ret = p.getLinkStates(
             self.id,
@@ -397,9 +387,7 @@ class BulletRobot:
         return frames
 
     def _setup_robot(self):
-        """
-        Internal function for setting up the correspondence
-        between link names and ids.
+        """ Internal function for setting up the correspondence between link names and ids.
         """
         # Code snippet borrowed from https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12728
         self._link_name_to_index = {
@@ -460,7 +448,7 @@ class BulletMecKinova(BulletRobot):
     
     def get_joint_infos(self):
         """
-        :return List[tuple]: [(jointIndex, jointName, ...), ...]
+        Return: List[tuple] [(jointIndex, jointName, ...), ...]
         """
         infos = []
         for i in range(0, p.getNumJoints(self.id)):
@@ -468,9 +456,8 @@ class BulletMecKinova(BulletRobot):
         return infos
     
     def get_joint_index(self):
-        """
-        Get the iondex of the joints in JOINTS_NAMES.
-        NOTE The joints have to be in the same order as JOINTS_NAMES.
+        """ Get the iondex of the joints in JOINTS_NAMES. 
+        The joints have to be in the same order as JOINTS_NAMES.
         """
         index = []
         joints_infos = self.get_joint_infos()
@@ -481,7 +468,7 @@ class BulletMecKinova(BulletRobot):
 
     def get_joint_states(self):
         """
-        :return: (joint positions, joint velocities)
+        Return: (joint positions, joint velocities)
         """
         states = p.getJointStates(
             self.id, self.joint_index, physicsClientId=self.clid
@@ -490,19 +477,19 @@ class BulletMecKinova(BulletRobot):
 
     def control_position(self, state):
         assert len(state) in [10]
-        """
-        p.setJointMotorControlArray(
-            self.id,
-            jointIndices=self.joint_index,
-            controlMode=p.POSITION_CONTROL,
-            targetPositions=state,
-            targetVelocities=[0] * len(state),
-            forces=[250] * len(state),
-            positionGains=[0.01] * len(state),
-            velocityGains=[1.0] * len(state),
-            physicsClientId=self.clid,
-        )
-        """
+
+        # p.setJointMotorControlArray(
+        #     self.id,
+        #     jointIndices=self.joint_index,
+        #     controlMode=p.POSITION_CONTROL,
+        #     targetPositions=state,
+        #     targetVelocities=[0] * len(state),
+        #     forces=[250] * len(state),
+        #     positionGains=[0.01] * len(state),
+        #     velocityGains=[1.0] * len(state),
+        #     physicsClientId=self.clid,
+        # )
+
         velocities = [0.0 for _ in state]
         for i in range(0, 10):
             p.resetJointState(
@@ -546,10 +533,9 @@ class BulletMecKinova(BulletRobot):
         return None
 
     def in_collision(self, obstacles, radius=0.0, check_self=False):
-        """
-        Checks whether the robot is in collision with the environment
+        """ Checks whether the robot is in collision with the environment.
 
-        :return: Boolean
+        Return: [bool]
         """
         # Step the simulator (only enough for collision detection)
         p.performCollisionDetection(physicsClientId=self.clid)
@@ -596,10 +582,9 @@ class BulletMecKinova(BulletRobot):
         return False
 
     def get_collision_points(self, obstacles, check_self=False):
-        """
-        Checks whether the robot is in collision with the environment
+        """ Checks whether the robot is in collision with the environment.
 
-        :return: Boolean
+        Return: [bool]
         """
         points = []
         # Step the simulator (only enough for collision detection)

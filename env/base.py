@@ -4,12 +4,13 @@ from utils.registry import Registry
 
 ENV = Registry('Env')
 def create_enviroment(cfg: DictConfig) -> nn.Module:
-    """ Create a planning environment for planning task
+    """ Create an environment for mobile manipulation tasks.
+
     Args:
-        cfg: configuration object
-        slurm: on slurm platform or not. This field is used to specify the data path
+        cfg [DictConfig]: Configuration object containing environment parameters.
+        nn.Module: The planning environment instance created according to the configuration.
     
     Return:
-        A Plan Env
+        An Env for mobile manipulation tasks.
     """
     return ENV.get(cfg.name)(cfg)
