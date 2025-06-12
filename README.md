@@ -278,10 +278,13 @@ ${object_name}: {
 **M3Bench**
 ```
 @article{zhang2025m3bench,
-  title={M $$\{$$\}$\^{}$\{$3$\}$ $ Bench: Benchmarking Whole-Body Motion Generation for Mobile Manipulation in 3D Scenes},
+  title={M${}^{3}$Bench: Benchmarking Whole-Body Motion Generation for Mobile Manipulation in 3D Scenes},
   author={Zhang, Zeyu and Yan, Sixu and Han, Muzhi and Wang, Zaijin and Wang, Xinggang and Zhu, Song-Chun and Liu, Hangxin},
   journal={IEEE Robotics and Automation Letters},
   year={2025},
+  volume={10},
+  number={7},
+  pages={7286-7293},
   publisher={IEEE}
 }
 ```
