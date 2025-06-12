@@ -328,9 +328,8 @@ class MecKinova:
         return self._simple_trimesh(eef_trimesh, color)
     
     def get_base_trimesh(self, config:Optional[Union[List[int], np.ndarray]]=None, color:Optional[str]=None):
-        """ Generates a trimesh representation of the robot's base link. 
-        Optionally updates the configuration before generating the mesh 
-        and applies a specified color if provided.
+        """ Generates a trimesh representation of the robot's base link. Optionally updates the configuration 
+        before generating the mesh and applies a specified color if provided.
 
         Args:
             config [Optional[Union[List[int], np.ndarray]]]: Optional configuration to update the robot's state before generating the mesh.
@@ -748,7 +747,8 @@ class MecKinova:
         limits: Tuple[float, float] = (-1, 1),
     ) -> Union[np.ndarray, torch.Tensor]:
         """ This function unnormalizes delta joint angles from a specified normalized range back into the MecKinova's delta joint limits.
-        It is the inverse operation of `normalize_joints`. The function supports both numpy arrays and torch tensors, and preserves the input's shape and type.
+        It is the inverse operation of `normalize_joints`. The function supports both numpy arrays and torch tensors, and preserves the 
+        input's shape and type.
 
         Args:
             batch_delta_trajectory [torch.Tensor]: 

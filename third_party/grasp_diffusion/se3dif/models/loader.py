@@ -104,24 +104,24 @@ def load_pointcloud_grasp_diffusion(args):
     geometry_encoder = models.geometry_encoder.map_projected_points
     # Feature Encoder
     feature_encoder = models.nets.TimeLatentFeatureEncoder(
-            enc_dim=feat_enc_params['enc_dim'], # 132
-            latent_size=v_enc_params['latent_size'], # 132
-            dims=feat_enc_params['dims'], # [512, 512, 512, 512, 512, 512, 512, 512]
-            out_dim=feat_enc_params['out_dim'], # 7
-            dropout=feat_enc_params['dropout'], # [0, 1, 2, 3, 4, 5, 6, 7]
-            dropout_prob=feat_enc_params['dropout_prob'], # 0.2
-            norm_layers=feat_enc_params['norm_layers'], # [0, 1, 2, 3, 4, 5, 6, 7]
-            latent_in=feat_enc_params["latent_in"], # [4]
-            xyz_in_all=feat_enc_params["xyz_in_all"], # False
-            use_tanh=feat_enc_params["use_tanh"], # False
-            latent_dropout=feat_enc_params["latent_dropout"], # False
-            weight_norm=feat_enc_params["weight_norm"] # True
+            enc_dim=feat_enc_params['enc_dim'],
+            latent_size=v_enc_params['latent_size'],
+            dims=feat_enc_params['dims'],
+            out_dim=feat_enc_params['out_dim'],
+            dropout=feat_enc_params['dropout'],
+            dropout_prob=feat_enc_params['dropout_prob'],
+            norm_layers=feat_enc_params['norm_layers'],
+            latent_in=feat_enc_params["latent_in"],
+            xyz_in_all=feat_enc_params["xyz_in_all"],
+            use_tanh=feat_enc_params["use_tanh"],
+            latent_dropout=feat_enc_params["latent_dropout"],
+            weight_norm=feat_enc_params["weight_norm"]
         )
     # 3D Points
-    if 'loc' in points_params: # [0.0, 0.0, 0.5]
-        points = models.points.get_3d_pts(n_points = points_params['n_points'], # 30
-                            loc=np.array(points_params['loc']), # [0.0, 0.0, 0.5]
-                            scale=np.array(points_params['scale'])) # [0.7, 0.5, 0.7]
+    if 'loc' in points_params:
+        points = models.points.get_3d_pts(n_points = points_params['n_points'],
+                            loc=np.array(points_params['loc']),
+                            scale=np.array(points_params['scale']))
     else:
         points = models.points.get_3d_pts(n_points=points_params['n_points'])
     # Energy Based Model

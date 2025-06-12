@@ -89,15 +89,6 @@ if __name__ == '__main__':
 
     import torch
 
-    # seed = 10
-    # torch.backends.cudnn.benchmark = False     
-    # torch.backends.cudnn.deterministic = True
-    # random.seed(seed)
-    # np.random.seed(seed)
-    # torch.manual_seed(seed)
-    # torch.cuda.manual_seed(seed)
-    # torch.cuda.manual_seed_all(seed)
-
     print('##########################################################')
     print('Object Class: {}'.format(args.obj_class))
     print(args.obj_id)

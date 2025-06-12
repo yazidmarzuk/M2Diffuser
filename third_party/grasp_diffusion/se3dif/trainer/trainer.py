@@ -45,12 +45,6 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                            np.array(train_losses))
 
             for step, (model_input, gt) in enumerate(train_dataloader):
-                """
-                print(model_input['visual_context'].shape) # [2, 1000, 3]
-                print(model_input['x_sdf'].shape) # [2, 1000, 3] sdf 对应的 1000 个点
-                print(model_input['x_ene_pos'].shape) # [2, 200, 4, 4] 随机挑选 200 个 pose
-                print(gt["sdf"].shape) # [2, 1000] sdf 对应的 1000 个数值
-                """
                 model_input = dict_to_device(model_input, device)
                 gt = dict_to_device(gt, device)
 

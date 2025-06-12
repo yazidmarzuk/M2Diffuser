@@ -1,15 +1,13 @@
-import copy
-import numpy as np
-from pyquaternion import Quaternion
-from typing import List, Union
-from math import cos, sin
-import open3d as o3d
 import torch
+import numpy as np
+import open3d as o3d
+from math import cos, sin
+from typing import List, Union
+from pyquaternion import Quaternion
 from scipy.spatial.transform import Rotation as R
 
 def EulerAngles2RotationMatrix(EulerAngles: Union[List[float], np.array]) -> np.ndarray:
-    """
-    Convert Euler angles to RotationMatrix.
+    """ Convert Euler angles to RotationMatrix.
     """
     theta = EulerAngles
     R_x = np.array([[1,         0,                  0               ],
@@ -31,15 +29,14 @@ def EulerAngles2RotationMatrix(EulerAngles: Union[List[float], np.array]) -> np.
     return RotationMatrix
 
 def EulerAnglesXYZ2TransformationMatrix(EulerAngles: Union[List[float], np.array], XYZ: Union[List[float], np.array]) -> np.ndarray:
-    """
-    Give EulerAngles and XYZ to get a homogeneous transformation matrix.
+    """ Give EulerAngles and XYZ to get a homogeneous transformation matrix.
 
-    Arguements:
-        EulerAngles {Union[List[float], np.array]} -- EulerAngles
-        XYZ {Union[List[float], np.array]} -- XYZ value
+    Args:
+        EulerAngles [Union[List[float], np.array]]: EulerAngles.
+        XYZ [Union[List[float], np.array]]: XYZ value.
     
     Returns:
-        np.array -- Homogeneous transformation matrix
+        np.array. Homogeneous transformation matrix.
     """
     TransformationMatrix = np.zeros((4, 4))
     RotationMatrix = EulerAngles2RotationMatrix(EulerAngles)
@@ -49,8 +46,7 @@ def EulerAnglesXYZ2TransformationMatrix(EulerAngles: Union[List[float], np.array
     return TransformationMatrix
 
 def TransformationMatrix2QuaternionXYZ(TransformationMatrix: Union[List[float], np.array]) -> np.ndarray:
-    """
-    Give a homogeneous transformation matrix to get Quaternion and XYZ.
+    """ Give a homogeneous transformation matrix to get Quaternion and XYZ.
     """
     T = np.asarray(TransformationMatrix)
     R = T[:3,:3]
@@ -64,12 +60,14 @@ def TransformationMatrix2QuaternionXYZ(TransformationMatrix: Union[List[float], 
     )
 
 def QuaternionXYZ2TransformationMatrix(Quaternion: Union[List[float], np.array], XYZ: Union[List[float], np.array]) -> np.ndarray:
-    """
-    Give Quaternion and XYZ to get a homogeneous transformation matrix.
+    """ Give Quaternion and XYZ to get a homogeneous transformation matrix.
 
-    :param Quaternion Union[List[float], np.array]: Quaternion [w, x, y, z]
-    :param XYZ Union[List[float], np.array]: XYZ value
-    :rtype np.array: Homogeneous transformation matrix
+    Args:
+        Quaternion [Union[List[float], np.array]]: Quaternion [w, x, y, z].
+        XYZ [Union[List[float], np.array]]: XYZ value.
+    
+    Returns:
+        np.array. Homogeneous transformation matrix.
     """
     q = [0, 0, 0, 0]
     q[0] = Quaternion[1]
@@ -87,8 +85,7 @@ def transform_pointcloud_numpy(
     points: np.ndarray, # [N, x, y, z]
     transformation_matrix: np.ndarray, # 4 x 4
 ) -> np.ndarray:
-    """
-    Matrix transformation of points.
+    """ Matrix transformation of points.
     """
     pointcloud = o3d.geometry.PointCloud()
     pointcloud.points = o3d.utility.Vector3dVector(points)
@@ -133,8 +130,7 @@ def transform_pointcloud_torch(pointcloud, transformation_matrix, in_place=True)
     return torch.cat((transformed_xyz[..., :3, :].transpose(N, M), pc[..., 3:]), dim=M)
 
 class SO3:
-    """
-    A generic class defining a 3D orientation. Mostly a wrapper around quaternions
+    """ A generic class defining a 3D orientation. Mostly a wrapper around quaternions.
     """
 
     def __init__(self, quaternion):

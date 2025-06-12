@@ -9,13 +9,15 @@ def transform_trajectory_torch(
     trans_mats: torch.Tensor,
     rot_angles: torch.Tensor,
 ) -> torch.Tensor:
-    """
-    Arguements:
-        trajectories {torch.Tensor} -- Unnormalized agent trajectory, [B, L, agent_dof].
-        trans_mats {torch.Tensor} -- Transformation matrix, [B, 4, 4].
-        rot_angles {torch.Tensor} -- Rotation angle in z axis, [B, 1].
-    Returns:
-        torch.Tensor -- The transformed agent trajectory, [B, L, agent_dof].
+    """ Transform the agent trajectory using transformation matrices and rotation angles.
+
+    Args:
+        trajs [torch.Tensor]: Unnormalized agent trajectory, shape [B, L, agent_dof].
+        trans_mats [torch.Tensor]: Transformation matrices, shape [B, 4, 4].
+        rot_angles [torch.Tensor]: Rotation angles along the z-axis, shape [B, 1].
+
+    Return:
+        torch.Tensor: The transformed agent trajectory, shape [B, L, agent_dof].
     """
     trajectories = trajs
     xy_2ds = trajectories[:,:,:2] # [B, L, 2]
@@ -37,13 +39,15 @@ def transform_configuration_torch(
     trans_mats: torch.Tensor,
     rot_angles: torch.Tensor,
 ) -> torch.Tensor:
-    """
-    Arguements:
-        configurations {torch.Tensor} -- Unnormalized agent configuration, [B, agent_dof].
-        trans_mats {torch.Tensor} -- Transformation matrix, [B, 4, 4].
-        rot_angles {torch.Tensor} -- Rotation angle in z axis, [B, 1].
-    Returns:
-        torch.Tensor -- The transformed agent configuration, [B, agent_dof].
+    """ Transform the agent configuration using transformation matrices and rotation angles.
+
+    Args:
+        cfgs [torch.Tensor]: Unnormalized agent configurations, shape [B, agent_dof].
+        trans_mats [torch.Tensor]: Transformation matrices, shape [B, 4, 4].
+        rot_angles [torch.Tensor]: Rotation angles around the z-axis, shape [B, 1].
+
+    Return:
+        torch.Tensor: The transformed agent configurations, shape [B, agent_dof].
     """
     B = cfgs.shape[0]
     configurations = cfgs
@@ -59,13 +63,15 @@ def transform_trajectory_numpy(
     trans_mat: np.ndarray,
     rot_angle: np.ndarray,
 ) -> np.ndarray:
-    """
-    Arguements:
-        trajectory {np.ndarray} -- Unnormalized agent trajectory, [L, agent_dof].
-        trans_mat {np.ndarray} -- Transformation matrix, [4, 4].
-        rot_angle {np.ndarray} -- Rotation angle in z axis, [1].
-    Returns:
-        torch.Tensor -- The transformed agent trajectory, [L, agent_dof].
+    """ Transform the agent trajectory using transformation matrices and rotation angles.
+
+    Args:
+        trajs [np.ndarray]: Unnormalized agent trajectory, shape [L, agent_dof].
+        trans_mats [np.ndarray]: Transformation matrices, shape [4, 4].
+        rot_angles [np.ndarray]: Rotation angles along the z-axis, shape [1].
+
+    Return:
+        np.ndarray: The transformed agent trajectory, shape [L, agent_dof].
     """
     trajectory = copy.deepcopy(traj)
     xy_2ds = trajectory[:,:2]
@@ -80,13 +86,15 @@ def transform_configuration_numpy(
     trans_mat: np.ndarray,
     rot_angle: np.ndarray,
 ) -> np.ndarray:
-    """
-    Arguements:
-        configuration {np.ndarray} -- Unnormalized agent configuration, [agent_dof].
-        trans_mat {np.ndarray} -- Transformation matrix, [4, 4].
-        rot_angle {np.ndarray} -- Rotation angle in z axis, [1].
-    Returns:
-        np.ndarray -- The transformed agent configuration, [agent_dof].
+    """ Transform the agent configuration using transformation matrices and rotation angles.
+
+    Args:
+        cfgs [np.ndarray]: Unnormalized agent configurations, shape [agent_dof].
+        trans_mats [np.ndarray]: Transformation matrices, shape [4, 4].
+        rot_angles [np.ndarray]: Rotation angles around the z-axis, shape [1].
+
+    Return:
+        np.ndarray: The transformed agent configurations, shape [agent_dof].
     """
     configuration = copy.deepcopy(cfg)
     xy_2d = configuration[:2]

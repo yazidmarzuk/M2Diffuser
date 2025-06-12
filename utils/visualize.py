@@ -1,12 +1,12 @@
-from typing import Any, Dict
-import cv2 as cv
 import os
 import glob
 import trimesh
 import numpy as np
-from PIL import Image
-from natsort import natsorted
+import cv2 as cv
 import networkx as nx
+from PIL import Image
+from typing import Any, Dict
+from natsort import natsorted
 
 if os.environ.get('SLURM') is None:
     if os.environ.get('RENDERING_BACKEND') == "egl":
@@ -18,7 +18,7 @@ if os.environ.get('SLURM') is None:
     import pyrender
 
 def render_prox_scene(meshes: Dict, camera_pose: np.ndarray, save_path: str, add_axis: bool=True) -> None:
-    """ Render prox scene, 
+    """ Render prox scene, this function is used to render the scene and bodies in PROX dataset.
 
     Args:
         meshes: the trimesh.Trimesh list, contaning scene meshes and bodies meshes

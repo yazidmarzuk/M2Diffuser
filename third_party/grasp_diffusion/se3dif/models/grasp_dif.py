@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn as nn
 
 class GaussianFourierProjection(nn.Module):
-    """Gaussian random features for encoding time steps."""
+    """ Gaussian random features for encoding time steps. """
     def __init__(self, embed_dim, scale=30.):
         super().__init__()
         # Randomly sample weights during initialization. These weights are fixed
@@ -57,9 +57,6 @@ class NaiveSE3DiffusionModel(nn.Module):
 
 
 class GraspDiffusionFields(nn.Module):
-    """ Grasp DiffusionFields. SE(3) diffusion model to learn 6D grasp distributions. See
-        SE(3)-DiffusionFields: Learning cost functions for joint grasp and motion optimization through diffusion
-    """
     def __init__(self, vision_encoder, geometry_encoder, points, feature_encoder, decoder):
         super().__init__()
         ## Register points to map H to points ##
@@ -76,22 +73,10 @@ class GraspDiffusionFields(nn.Module):
         self.decoder = decoder
 
     def set_latent(self, O, batch = 1):
-        """
-        batch: 1000
-        batch 在训练的时候会有两个值，因为网络训练了两个部分
-        """
         self.z = self.vision_encoder(O.squeeze(1))
         self.z = self.z.unsqueeze(1).repeat(1, batch, 1).reshape(-1, self.z.shape[-1])
 
     def forward(self, H, k):
-        """
-        Size:
-        H: [400, 4, 4]
-        k: [400]
-        k_ext: [400, 30]
-        z: [400, 132]
-        z_ext: [400, 30, 132]
-        """
         ## 1. Represent H with points
         p = self.geometry_encoder(H, self.points)
         k_ext = k.unsqueeze(1).repeat(1, p.shape[1])

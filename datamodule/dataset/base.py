@@ -62,7 +62,7 @@ class MKPointCloudStateBase(Dataset):
         dataset_type: DatasetType, 
         **kwargs: Dict,
     ):
-        """ Initialize the dataset。
+        """ Initialize the dataset.
 
         Args:
             cfg [dict]: Configuration dictionary including trajectory_key, task_type, and point sampling numbers.

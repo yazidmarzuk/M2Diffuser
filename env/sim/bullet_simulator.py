@@ -19,7 +19,7 @@ class Bullet:
         self.obstacle_ids = []
 
     def __del__(self):
-        """ Disconnects the client on destruction
+        """ Disconnects the client on destruction.
         """
         p.disconnect(self.clid)
 

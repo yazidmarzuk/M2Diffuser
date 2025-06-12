@@ -1,12 +1,10 @@
-from typing import List, Optional, Union
+import torch
 import numpy as np
 import open3d as o3d
-import torch
 import utils.pointcloud_utils as pcu
-
-import sys
-from os import path, read
+from os import path
 from os.path import join
+from typing import List, Optional, Union
 
 def read_point_cloud(pc_file) -> o3d.geometry.PointCloud:
     pcd = o3d.io.read_point_cloud(pc_file)
@@ -347,6 +345,3 @@ if __name__=="__main__":
     whole_point_cloud = []
 
     PointCloudVisualizer(whole_point_cloud)
-    
-    
-        

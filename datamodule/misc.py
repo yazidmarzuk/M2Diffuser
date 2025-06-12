@@ -14,7 +14,7 @@ def collate_fn_general(batch: List) -> Dict:
 
 def collate_fn_squeeze_pcd_batch(batch: List) -> Dict:
     """ General collate function used for dataloader. 
-    This collate function is used for point-transformer
+    This collate function is used for point-transformer.
     """
     batch_data = {key: [d[key] for d in batch] for key in batch[0]}
     
@@ -37,7 +37,7 @@ def collate_fn_squeeze_pcd_batch(batch: List) -> Dict:
 
 def collate_fn_squeeze_pcd_batch_grasp(batch: List) -> Dict:
     """ General collate function used for dataloader.
-    This collate function is used for point-transformer
+    This collate function is used for point-transformer.
     """
     batch_data = {key: [d[key] for d in batch] for key in batch[0]}
 

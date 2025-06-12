@@ -6,18 +6,13 @@ import numpy as np
 
 
 class GaussianFourierProjection(nn.Module):
-    """Gaussian random features for encoding time steps."""
+    """ Gaussian random features for encoding time steps. """
     def __init__(self, embed_dim, scale=30.):
         super().__init__()
         # Randomly sample weights during initialization. These weights are fixed
         # during optimization and are not trainable.
         self.W = nn.Parameter(torch.randn(embed_dim // 2) * scale, requires_grad=False)
     def forward(self, x):
-        """
-        print(x.shape) # 2000
-        print(self.W.shape) # 66
-        print(torch.einsum('...,b->...b',x, self.W).shape) # [2000, 66]
-        """
         x_proj = torch.einsum('...,b->...b',x, self.W)* 2 * np.pi
         return torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=-1)
 
@@ -46,20 +41,6 @@ class TimeLatentFeatureEncoder(nn.Module):
         latent_dropout=False,
         feats_layers = None
     ):
-        """
-            latent_size, # 132
-            dims, # [512, 512, 512, 512, 512, 512, 512, 512]
-            enc_dim, # 132
-            out_dim, # 7
-            dropout, # [0, 1, 2, 3, 4, 5, 6, 7]
-            dropout_prob, # 0.2
-            norm_layers, # [0, 1, 2, 3, 4, 5, 6, 7]
-            latent_in, # [4]
-            weight_norm, # True
-            xyz_in_all, # False
-            use_tanh, # False
-            latent_dropout, # False
-        """
         super(TimeLatentFeatureEncoder, self).__init__()
 
         ## Time Embedings Encoder ##

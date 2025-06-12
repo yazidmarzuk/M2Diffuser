@@ -6,8 +6,7 @@ from geometrout.primitive import Cuboid
 from cprint import *
 
 class TorchCuboids:
-    """
-    A Pytorch representation of a batch of M cuboids (i.e. B elements in the batch, M cuboids per element).
+    """ A Pytorch representation of a batch of M cuboids (i.e. B elements in the batch, M cuboids per element).
     Any of these cuboids can have zero volume (these will be masked out during calculation of the various 
     functions in this class, such as sdf).
     """

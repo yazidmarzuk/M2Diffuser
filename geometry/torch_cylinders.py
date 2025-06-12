@@ -5,8 +5,7 @@ import torch
 from geometrout.primitive import Cylinder
 
 class TorchCylinders:
-    """
-    A Pytorch representation of a batch of M cylinders (i.e. B elements in the batch,
+    """ A Pytorch representation of a batch of M cylinders (i.e. B elements in the batch,
     M cylinders per element). Any of these cylinders can have zero volume (these
     will be masked out during calculation of the various functions in this
     class, such as sdf).

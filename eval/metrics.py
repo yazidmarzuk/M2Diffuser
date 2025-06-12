@@ -1,10 +1,10 @@
 import time
 import pickle
-from pathlib import Path
 import itertools
 import pybullet as p
 import numpy as np
 from cprint import *
+from pathlib import Path
 from eval.sparc import sparc
 from utils.transform import SE3
 from termcolor import colored
@@ -28,7 +28,7 @@ def percent_true(arr: Sequence) -> float:
 
 
 class Evaluator:
-    """ This class can be used to evaluate a whole set of environments and data
+    """ This class can be used to evaluate a whole set of environments and data.
     """
 
     def __init__(self, gui: bool = False):

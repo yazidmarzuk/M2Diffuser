@@ -1,5 +1,5 @@
-import copy
 import os
+import copy
 import trimesh
 import numpy as np
 from lxml import etree

@@ -5,8 +5,7 @@ import numpy as np
 import torch
 
 class TorchSpheres:
-    """
-    A Pytorch representation of a batch of M spheres (i.e. B elements in the batch,
+    """ A Pytorch representation of a batch of M spheres (i.e. B elements in the batch,
     M spheres per element). Any of these spheres can have zero volume (these
     will be masked out during calculation of the various functions in this
     class, such as sdf).
