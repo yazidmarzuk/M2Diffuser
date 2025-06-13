@@ -30,8 +30,8 @@ Zaijin Wang<sup>2</sup>,
 [Qi Xie](https://github.com/sudoku77/)<sup>2</sup>,
 Zhitian Li<sup>2,4</sup>,
 Zhehan Li<sup>2,5</sup>,
-[Hangxin Liu](https://zhusongchun.net/)<sup>2</sup>,
-[Xinggang Wang](https://zhusongchun.net/)<sup>1</sup>,
+[Hangxin Liu](https://liuhx111.github.io/)<sup>2</sup>,
+[Xinggang Wang](https://xwcv.github.io/)<sup>1</sup>,
 [Song-Chun Zhu](https://zhusongchun.net/)<sup>2,6,7</sup>
 
 Corresponding authors: Xinggang Wang (xgwang@hust.edu.cn) and Hangxin Liu (liuhx@bigai.ai)
