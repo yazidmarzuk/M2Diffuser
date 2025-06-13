@@ -15,7 +15,7 @@
     <a href='https://youtu.be/T7kpDifRtfk?si=-R5agRpDM4uJKtuz' target='_blank'>
       <img src='https://img.shields.io/badge/YouTube-Video-6f42c1?style=plastic&logo=youtube&logoColor=white' alt='YouTube Video'>
     </a>
-    <a href=''>
+    <a href='https://b23.tv/avOmoz0'>
       <img src='https://img.shields.io/badge/Bilibili-Video-ff69b4?style=plastic&logo=bilibili&logoColor=white' alt='Bilibili Video'>
     </a>
     <a href='https://huggingface.co/datasets/M2Diffuser/mec_kinova_mobile_manipulation/tree/main'>
