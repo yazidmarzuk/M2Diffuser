@@ -23,7 +23,7 @@
     </a>
 </p>
 
-[Sixu Yan](https://scholar.google.com/citations?user=vVU-oVMAAAAJ&hl=en)<sup>1,2</sup>,
+[Sixu Yan](https://sixu-yan.github.io)<sup>1,2</sup>,
 [Zeyu Zhang](https://zeyuzhang.com/)<sup>2</sup>,
 [Muzhi Han](https://sites.google.com/view/muzhihan)<sup>3</sup>,
 Zaijin Wang<sup>2</sup>,
