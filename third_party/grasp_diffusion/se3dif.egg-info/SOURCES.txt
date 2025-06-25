@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+isaac_evaluation/__init__.py
+se3dif/__init__.py
+se3dif.egg-info/PKG-INFO
+se3dif.egg-info/SOURCES.txt
+se3dif.egg-info/dependency_links.txt
+se3dif.egg-info/requires.txt
+se3dif.egg-info/top_level.txt

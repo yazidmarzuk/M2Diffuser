@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: se3dif
+Version: 0.1
+Summary: SE(3)-DiffusionFields. A library to learn and sample from diffusion models on SE(3). We show how to train and use them for learning 6D grasp distributions.
+Author: Julen Urain
+Author-email: julen@robot-learning.de
+License-File: LICENSE
+Requires-Dist: theseus-ai==0.1.3
+Requires-Dist: configargparse==1.5.3
+Requires-Dist: h5py==3.7.0
+Requires-Dist: pyglet==1.5.27
+Requires-Dist: matplotlib==3.5.3
+Requires-Dist: natsort==8.2.0
+Requires-Dist: geometrout==0.1.3
+Requires-Dist: yourdfpy==0.0.53
